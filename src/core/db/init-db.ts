@@ -2,6 +2,8 @@ import { db } from './index';
 import { sql, count } from 'drizzle-orm';
 import { contentEntities, ingredients, instructions, tags } from './schema/content';
 import { aiDrafts } from './schema/drafts';
+import { seedStapleFoods } from '@/modules/nutrition/services/seed-foods';
+import { calculateAndCacheRecipeNutrition } from '@/modules/nutrition/services/calculator-service';
 
 /**
  * Synchronizes a single content entity into the SQLite FTS5 search index (`content_fts`).
@@ -262,6 +264,109 @@ export async function initializeDatabase() {
         updated_at TEXT NOT NULL
       );
     `);
+
+    // 14. Nutrition Engine Tables
+    await db.run(sql`
+      CREATE TABLE IF NOT EXISTS nutrition_foods (
+        id TEXT PRIMARY KEY,
+        food_name TEXT NOT NULL UNIQUE,
+        aliases TEXT,
+        source TEXT DEFAULT 'manual' NOT NULL,
+        serving_size REAL DEFAULT 100 NOT NULL,
+        serving_unit TEXT DEFAULT 'g' NOT NULL,
+        density_g_per_ml REAL DEFAULT 1.0,
+        piece_weight_g REAL,
+        cup_weight_g REAL,
+        tbsp_weight_g REAL,
+        calories REAL DEFAULT 0 NOT NULL,
+        protein REAL DEFAULT 0 NOT NULL,
+        fat REAL DEFAULT 0 NOT NULL,
+        saturated_fat REAL DEFAULT 0,
+        unsaturated_fat REAL DEFAULT 0,
+        carbohydrates REAL DEFAULT 0 NOT NULL,
+        fiber REAL DEFAULT 0,
+        sugar REAL DEFAULT 0,
+        vitamin_a REAL DEFAULT 0,
+        vitamin_b1 REAL DEFAULT 0,
+        vitamin_b2 REAL DEFAULT 0,
+        vitamin_b3 REAL DEFAULT 0,
+        vitamin_b5 REAL DEFAULT 0,
+        vitamin_b6 REAL DEFAULT 0,
+        vitamin_b7 REAL DEFAULT 0,
+        vitamin_b9 REAL DEFAULT 0,
+        vitamin_b12 REAL DEFAULT 0,
+        vitamin_c REAL DEFAULT 0,
+        vitamin_d REAL DEFAULT 0,
+        vitamin_e REAL DEFAULT 0,
+        vitamin_k REAL DEFAULT 0,
+        calcium REAL DEFAULT 0,
+        iron REAL DEFAULT 0,
+        magnesium REAL DEFAULT 0,
+        potassium REAL DEFAULT 0,
+        sodium REAL DEFAULT 0,
+        zinc REAL DEFAULT 0,
+        copper REAL DEFAULT 0,
+        selenium REAL DEFAULT 0,
+        manganese REAL DEFAULT 0,
+        phosphorus REAL DEFAULT 0,
+        cholesterol REAL DEFAULT 0,
+        omega3 REAL DEFAULT 0,
+        omega6 REAL DEFAULT 0,
+        water REAL DEFAULT 0,
+        source_reference TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+    `);
+
+    await db.run(sql`
+      CREATE TABLE IF NOT EXISTS canonical_ingredient_nutrition_map (
+        id TEXT PRIMARY KEY,
+        normalized_ingredient_name TEXT NOT NULL UNIQUE,
+        nutrition_food_id TEXT NOT NULL REFERENCES nutrition_foods(id) ON DELETE CASCADE,
+        confidence_score REAL DEFAULT 1.0 NOT NULL,
+        mapping_method TEXT DEFAULT 'manual' NOT NULL,
+        approved_by TEXT,
+        approved_at TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+    `);
+
+    await db.run(sql`
+      CREATE TABLE IF NOT EXISTS ingredient_synonyms (
+        id TEXT PRIMARY KEY,
+        variant_name TEXT NOT NULL UNIQUE,
+        canonical_name TEXT NOT NULL
+      );
+    `);
+
+    await db.run(sql`
+      CREATE TABLE IF NOT EXISTS recipe_nutrition_cache (
+        id TEXT PRIMARY KEY,
+        recipe_id TEXT NOT NULL UNIQUE REFERENCES content_entities(id) ON DELETE CASCADE,
+        calories_per_serving REAL DEFAULT 0 NOT NULL,
+        protein_per_serving REAL DEFAULT 0 NOT NULL,
+        carbs_per_serving REAL DEFAULT 0 NOT NULL,
+        fat_per_serving REAL DEFAULT 0 NOT NULL,
+        fiber_per_serving REAL DEFAULT 0 NOT NULL,
+        sugar_per_serving REAL DEFAULT 0 NOT NULL,
+        nutrition_coverage_percent REAL DEFAULT 100 NOT NULL,
+        mapped_ingredient_count INTEGER DEFAULT 0 NOT NULL,
+        total_ingredient_count INTEGER DEFAULT 0 NOT NULL,
+        unmapped_ingredients TEXT,
+        total_nutrition TEXT NOT NULL,
+        per_serving_nutrition TEXT NOT NULL,
+        calculated_at TEXT NOT NULL,
+        calculation_version TEXT DEFAULT 'v1.0' NOT NULL
+      );
+    `);
+
+    try {
+      await seedStapleFoods();
+    } catch (e) {
+      console.warn('Seeding staple foods skipped:', e);
+    }
 
     // 13. SQLite FTS5 Virtual Table for Multi-Field Search
     try {

@@ -5,4 +5,5 @@ export * from './drafts';
 export * from './settings';
 export * from './ratings';
 export * from './comments';
+export * from './nutrition';
 

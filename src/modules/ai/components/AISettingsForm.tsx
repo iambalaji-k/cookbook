@@ -89,14 +89,14 @@ export function AISettingsForm({ initialConfig }: AISettingsFormProps) {
       setBaseUrl('https://api.openai.com/v1');
       setModel('gpt-4o-mini');
     } else if (presetProvider === 'deepseek') {
-      setBaseUrl('https://api.deepseek.com/v1');
+      setBaseUrl('https://api.deepseek.com');
       setModel('deepseek-chat');
     } else if (presetProvider === 'groq') {
       setBaseUrl('https://api.groq.com/openai/v1');
       setModel('llama-3.3-70b-versatile');
     } else if (presetProvider === 'openrouter') {
       setBaseUrl('https://openrouter.ai/api/v1');
-      setModel('meta-llama/llama-3.3-70b-instruct');
+      setModel('deepseek/deepseek-chat');
     } else if (presetProvider === 'ollama') {
       setBaseUrl('http://localhost:11434/v1');
       setModel('llama3');

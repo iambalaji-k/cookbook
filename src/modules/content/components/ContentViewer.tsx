@@ -23,6 +23,7 @@ import { convertIngredientUnit } from '../utils/unit-converter';
 import { AIStatsCard } from '@/modules/ai/components/AIStatsCard';
 import { StarRating } from './StarRating';
 import { RecipeCommentsSection } from './RecipeCommentsSection';
+import { RecipeNutritionCard } from '@/modules/nutrition/components/RecipeNutritionCard';
 
 interface ContentViewerProps {
   entity: {
@@ -287,6 +288,9 @@ export function ContentViewer({ entity }: ContentViewerProps) {
           timestamp={entity.aiTimestamp}
         />
       )}
+
+      {/* Recipe Nutrition Engine Card */}
+      <RecipeNutritionCard recipeId={entity.id} servings={targetServings} />
 
       {/* Controls Bar: Serving Size Portion Scaler & Metric/Imperial Unit Selector */}
       {entity.ingredients.length > 0 && (

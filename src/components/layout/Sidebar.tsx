@@ -9,13 +9,15 @@ import {
   Search, 
   Settings, 
   Home, 
-  History 
+  History,
+  Activity 
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navigationItems = [
   { name: 'Dashboard', href: '/', icon: Home },
   { name: 'Content & Recipes', href: '/content', icon: BookOpen },
+  { name: 'Nutrition Engine', href: '/nutrition', icon: Activity, badge: 'v1.0' },
   { name: 'Raw Imports', href: '/imports', icon: FileText },
   { name: 'AI Drafts Queue', href: '/drafts', icon: Sparkles, badge: 'Staging' },
   { name: 'Search', href: '/search', icon: Search },
