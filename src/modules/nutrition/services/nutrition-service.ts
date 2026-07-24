@@ -57,6 +57,20 @@ export async function findApprovedFoodMapping(ingredientName: string): Promise<N
       }
     }
 
+    // 4. Direct search in nutrition_foods by foodName or aliases fallback
+    if (mapRows.length === 0) {
+      const searchClean = `%${rawClean}%`;
+      const directFoods = await db
+        .select()
+        .from(nutritionFoods)
+        .where(sql`LOWER(food_name) LIKE ${searchClean} OR LOWER(aliases) LIKE ${searchClean}`)
+        .limit(1);
+
+      if (directFoods.length > 0) {
+        return parseFoodRow(directFoods[0]);
+      }
+    }
+
     if (mapRows.length === 0) {
       return null;
     }
@@ -100,13 +114,13 @@ export async function searchNutritionFoods(query: string, limit = 20): Promise<N
  * Creates a custom food record and automatically registers an approved canonical mapping.
  */
 export async function createCustomFoodAndMap(
-  data: CreateFoodInput & { ingredientNameToMap?: string; approvedBy?: string }
+  data: Partial<CreateFoodInput> & { foodName: string; ingredientNameToMap?: string; approvedBy?: string }
 ): Promise<{ food: NutritionFoodRecord; mappedName?: string }> {
   const foodId = 'food_custom_' + crypto.randomUUID();
   const now = new Date().toISOString();
 
   await db.run(sql`
-    INSERT INTO nutrition_foods (
+    INSERT OR REPLACE INTO nutrition_foods (
       id, food_name, aliases, source, serving_size, serving_unit,
       density_g_per_ml, piece_weight_g, cup_weight_g, tbsp_weight_g,
       calories, protein, fat, saturated_fat, unsaturated_fat, carbohydrates, fiber, sugar,
@@ -142,63 +156,63 @@ export async function createCustomFoodAndMap(
   };
 }
 
-function parseFoodRow(row: any): NutritionFoodRecord {
+function parseFoodRow(row: Record<string, any>): NutritionFoodRecord {
   return {
     id: row.id,
-    foodName: row.foodName,
-    aliases: row.aliases ? JSON.parse(row.aliases) : [],
-    source: row.source,
-    servingSize: row.servingSize,
-    servingUnit: row.servingUnit,
-    densityGPerMl: row.densityGPerMl,
-    pieceWeightG: row.pieceWeightG,
-    cupWeightG: row.cupWeightG,
-    tbspWeightG: row.tbspWeightG,
-    sourceReference: row.sourceReference,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
+    foodName: row.foodName ?? row.food_name ?? 'Unknown Food',
+    aliases: typeof row.aliases === 'string' ? JSON.parse(row.aliases) : (Array.isArray(row.aliases) ? row.aliases : []),
+    source: row.source ?? 'manual',
+    servingSize: Number(row.servingSize ?? row.serving_size ?? 100),
+    servingUnit: row.servingUnit ?? row.serving_unit ?? 'g',
+    densityGPerMl: Number(row.densityGPerMl ?? row.density_g_per_ml ?? 1.0),
+    pieceWeightG: row.pieceWeightG ?? row.piece_weight_g ?? null,
+    cupWeightG: row.cupWeightG ?? row.cup_weight_g ?? null,
+    tbspWeightG: row.tbspWeightG ?? row.tbsp_weight_g ?? null,
+    sourceReference: row.sourceReference ?? row.source_reference ?? null,
+    createdAt: row.createdAt ?? row.created_at ?? new Date().toISOString(),
+    updatedAt: row.updatedAt ?? row.updated_at ?? new Date().toISOString(),
     macros: {
-      calories: row.calories || 0,
-      protein: row.protein || 0,
-      fat: row.fat || 0,
-      saturatedFat: row.saturatedFat || 0,
-      unsaturatedFat: row.unsaturatedFat || 0,
-      carbohydrates: row.carbohydrates || 0,
-      fiber: row.fiber || 0,
-      sugar: row.sugar || 0,
+      calories: Number(row.calories ?? 0),
+      protein: Number(row.protein ?? 0),
+      fat: Number(row.fat ?? 0),
+      saturatedFat: Number(row.saturatedFat ?? row.saturated_fat ?? 0),
+      unsaturatedFat: Number(row.unsaturatedFat ?? row.unsaturated_fat ?? 0),
+      carbohydrates: Number(row.carbohydrates ?? 0),
+      fiber: Number(row.fiber ?? 0),
+      sugar: Number(row.sugar ?? 0),
     },
     vitamins: {
-      vitaminA: row.vitaminA || 0,
-      vitaminB1: row.vitaminB1 || 0,
-      vitaminB2: row.vitaminB2 || 0,
-      vitaminB3: row.vitaminB3 || 0,
-      vitaminB5: row.vitaminB5 || 0,
-      vitaminB6: row.vitaminB6 || 0,
-      vitaminB7: row.vitaminB7 || 0,
-      vitaminB9: row.vitaminB9 || 0,
-      vitaminB12: row.vitaminB12 || 0,
-      vitaminC: row.vitaminC || 0,
-      vitaminD: row.vitaminD || 0,
-      vitaminE: row.vitaminE || 0,
-      vitaminK: row.vitaminK || 0,
+      vitaminA: Number(row.vitaminA ?? row.vitamin_a ?? 0),
+      vitaminB1: Number(row.vitaminB1 ?? row.vitamin_b1 ?? 0),
+      vitaminB2: Number(row.vitaminB2 ?? row.vitamin_b2 ?? 0),
+      vitaminB3: Number(row.vitaminB3 ?? row.vitamin_b3 ?? 0),
+      vitaminB5: Number(row.vitaminB5 ?? row.vitamin_b5 ?? 0),
+      vitaminB6: Number(row.vitaminB6 ?? row.vitamin_b6 ?? 0),
+      vitaminB7: Number(row.vitaminB7 ?? row.vitamin_b7 ?? 0),
+      vitaminB9: Number(row.vitaminB9 ?? row.vitamin_b9 ?? 0),
+      vitaminB12: Number(row.vitaminB12 ?? row.vitamin_b12 ?? 0),
+      vitaminC: Number(row.vitaminC ?? row.vitamin_c ?? 0),
+      vitaminD: Number(row.vitaminD ?? row.vitamin_d ?? 0),
+      vitaminE: Number(row.vitaminE ?? row.vitamin_e ?? 0),
+      vitaminK: Number(row.vitaminK ?? row.vitamin_k ?? 0),
     },
     minerals: {
-      calcium: row.calcium || 0,
-      iron: row.iron || 0,
-      magnesium: row.magnesium || 0,
-      potassium: row.potassium || 0,
-      sodium: row.sodium || 0,
-      zinc: row.zinc || 0,
-      copper: row.copper || 0,
-      selenium: row.selenium || 0,
-      manganese: row.manganese || 0,
-      phosphorus: row.phosphorus || 0,
+      calcium: Number(row.calcium ?? 0),
+      iron: Number(row.iron ?? 0),
+      magnesium: Number(row.magnesium ?? 0),
+      potassium: Number(row.potassium ?? 0),
+      sodium: Number(row.sodium ?? 0),
+      zinc: Number(row.zinc ?? 0),
+      copper: Number(row.copper ?? 0),
+      selenium: Number(row.selenium ?? 0),
+      manganese: Number(row.manganese ?? 0),
+      phosphorus: Number(row.phosphorus ?? 0),
     },
     other: {
-      cholesterol: row.cholesterol || 0,
-      omega3: row.omega3 || 0,
-      omega6: row.omega6 || 0,
-      water: row.water || 0,
+      cholesterol: Number(row.cholesterol ?? 0),
+      omega3: Number(row.omega3 ?? 0),
+      omega6: Number(row.omega6 ?? 0),
+      water: Number(row.water ?? 0),
     },
   };
 }

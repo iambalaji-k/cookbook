@@ -7,8 +7,7 @@ import {
   Database, 
   ShieldCheck, 
   CheckCircle2, 
-  Server,
-  Sliders
+  Server
 } from 'lucide-react';
 
 export const revalidate = 0;
@@ -27,66 +26,67 @@ export default async function SettingsPage() {
     }
   }
 
+  // Mask the API key before passing to the form to prevent exposure in page source
+  const maskedAiSettings = aiSettings
+    ? {
+        ...aiSettings,
+        apiKey: aiSettings.apiKey ? '••••••••' : '',
+      }
+    : null;
+
   return (
-    <div className="space-y-8 max-w-4xl">
+    <div className="space-y-6 w-full max-w-full animate-hud-reveal">
       {/* Settings Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-          <SettingsIcon className="w-6 h-6 text-orange-400" />
-          System Settings & Infrastructure
+      <div className="flex items-center justify-between border-b border-neutral-800/80 pb-4">
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-orange-500/10 text-orange-400 border border-orange-500/20">
+            <SettingsIcon className="w-5 h-5" />
+          </div>
+          <span>Settings</span>
         </h1>
-        <p className="text-neutral-400 text-sm mt-1">
-          Manage AI Gateway parameters, database targets, app preferences, and project governance.
-        </p>
       </div>
 
       {/* Interactive AI Gateway Configuration & Live Tester */}
-      <AISettingsForm initialConfig={aiSettings as any} />
+      <AISettingsForm initialConfig={maskedAiSettings as any} />
 
       {/* Interactive System Preferences Form (Unit System, Search Engine, PWA) */}
       <SystemSettingsForm initialConfig={sysSettings as any} />
 
       {/* Database & Infrastructure Config Card */}
-      <div className="p-6 rounded-2xl glass-panel border border-neutral-800 space-y-6">
-        <div className="flex items-center justify-between border-b border-neutral-800 pb-4">
-          <div className="flex items-center gap-3">
-            <Database className="w-5 h-5 text-orange-400" />
-            <div>
-              <h2 className="text-base font-bold text-white">Database & Modular Schemas</h2>
-              <p className="text-xs text-neutral-400">Turso serverless SQLite & Drizzle ORM pipeline</p>
-            </div>
+      <div className="p-5 sm:p-6 rounded-2xl elevation-level2 border border-neutral-800/90 space-y-4 shadow-xl">
+        <div className="flex items-center justify-between border-b border-neutral-800/80 pb-3">
+          <div className="flex items-center gap-2.5">
+            <Database className="w-4.5 h-4.5 text-orange-400" />
+            <h2 className="text-base font-bold text-white font-sans">Database Status</h2>
           </div>
-          <span className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-medium border border-emerald-500/20 flex items-center gap-1.5">
+          <span className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 font-mono text-xs font-semibold border border-emerald-500/20 flex items-center gap-1.5">
             <CheckCircle2 className="w-3.5 h-3.5" />
             {process.env.TURSO_DATABASE_URL ? 'Turso Cloud Connected' : 'Local SQLite Active'}
           </span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-          <div className="p-4 rounded-xl bg-neutral-900/60 border border-neutral-800 space-y-2">
-            <span className="font-semibold text-neutral-200 flex items-center gap-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono">
+          <div className="p-3.5 rounded-xl bg-neutral-900/80 border border-neutral-800 space-y-2">
+            <span className="font-semibold text-zinc-200 flex items-center gap-2">
               <Server className="w-4 h-4 text-orange-400" />
-              Target Connection
+              Connection
             </span>
-            <p className="text-neutral-400">
-              URL: <code className="text-orange-300">{process.env.TURSO_DATABASE_URL || 'file:local.db'}</code>
+            <p className="text-zinc-400">
+              URL: <code className="text-orange-400">{process.env.TURSO_DATABASE_URL || 'file:local.db'}</code>
             </p>
-            <p className="text-neutral-400">
-              ORM Driver: <code className="text-orange-300">Drizzle LibSQL</code>
+            <p className="text-zinc-400">
+              Driver: <code className="text-orange-400">Drizzle LibSQL</code>
             </p>
           </div>
 
-          <div className="p-4 rounded-xl bg-neutral-900/60 border border-neutral-800 space-y-2">
-            <span className="font-semibold text-neutral-200 flex items-center gap-2">
+          <div className="p-3.5 rounded-xl bg-neutral-900/80 border border-neutral-800 space-y-2">
+            <span className="font-semibold text-zinc-200 flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              Domain Schema Modules
+              Active Modules
             </span>
-            <ul className="text-neutral-400 space-y-1">
-              <li>• <code className="text-neutral-200">content_entities</code>, <code className="text-neutral-200">ingredients</code>, <code className="text-neutral-200">instructions</code></li>
-              <li>• <code className="text-neutral-200">revisions</code> (snapshots with versionNumbers)</li>
-              <li>• <code className="text-neutral-200">raw_imports</code> (preserves unadulterated source)</li>
-              <li>• <code className="text-neutral-200">ai_drafts</code> (confidence, latency, tokenUsage)</li>
-              <li>• <code className="text-neutral-200">system_settings</code> & <code className="text-neutral-200">ai_provider_settings</code></li>
+            <ul className="text-zinc-400 space-y-1">
+              <li>• <code className="text-zinc-200">content_entities</code>, <code className="text-zinc-200">ingredients</code>, <code className="text-zinc-200">instructions</code></li>
+              <li>• <code className="text-zinc-200">revisions</code>, <code className="text-zinc-200">raw_imports</code>, <code className="text-zinc-200">ai_drafts</code></li>
             </ul>
           </div>
         </div>

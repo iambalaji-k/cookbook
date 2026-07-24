@@ -58,7 +58,7 @@ export function normalizeIngredientObject(raw: any) {
   let notes = String(raw.notes || '').trim();
 
   // If amount or unit is missing or numbers are stuck in itemName, attempt regex parsing
-  if ((!amount || !unit) && /^\d/.test(itemName)) {
+  if ((!amount || !unit) && itemName && /\d/.test(itemName)) {
     const parsed = parseMergedIngredientString(itemName);
     if (parsed.amount) amount = parsed.amount;
     if (parsed.unit) unit = parsed.unit;

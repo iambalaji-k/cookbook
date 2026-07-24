@@ -53,8 +53,8 @@ export function SystemSettingsForm({ initialConfig }: { initialConfig?: SystemSe
       } else {
         setError(data.error || 'Failed to update system settings.');
       }
-    } catch (err: any) {
-      setError(err.message || 'An error occurred while saving.');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred while saving.');
     } finally {
       setSaving(false);
     }

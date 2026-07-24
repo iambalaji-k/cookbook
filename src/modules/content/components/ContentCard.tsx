@@ -64,6 +64,12 @@ const typeLabels = {
   kitchen_tip: 'Kitchen Tip',
 };
 
+const difficultyStyles = {
+  easy: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25',
+  medium: 'bg-amber-500/10 text-amber-400 border-amber-500/25',
+  hard: 'bg-red-500/10 text-red-400 border-red-500/25',
+};
+
 export function ContentCard(props: ContentCardProps) {
   const data = props.entity || props;
   const {
@@ -106,41 +112,43 @@ export function ContentCard(props: ContentCardProps) {
 
   const Icon = typeIcons[contentType as keyof typeof typeIcons] || Utensils;
   const label = typeLabels[contentType as keyof typeof typeLabels] || 'Content';
-
   const totalTime = (prepTimeMinutes || 0) + (cookTimeMinutes || 0);
+  const detailHref = `/content/${slug || id}`;
 
   return (
-    <div className="group rounded-2xl glass-panel border border-neutral-800 hover:border-orange-500/40 transition-all duration-300 overflow-hidden flex flex-col justify-between relative">
+    <div className="group rounded-2xl elevation-level3 border border-neutral-800/80 hover:border-orange-500/40 hover:-translate-y-1 transition-all duration-300 overflow-hidden flex flex-col justify-between relative shadow-lg">
       <div>
-        {/* Cover Image or Gradient Banner */}
+        {/* Cover Image (Swiggy / Zomato standard 16:9 widescreen aspect ratio) */}
         {imageUrl ? (
-          <div className="relative h-44 w-full overflow-hidden bg-neutral-900">
+          <Link href={detailHref} className="relative block w-full aspect-[16/9] overflow-hidden bg-neutral-900">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={imageUrl}
               alt={title || 'Content image'}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-500"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-transparent to-transparent opacity-80" />
-            <div className="absolute top-3 left-3">
-              <span className="px-2.5 py-1 rounded-full bg-neutral-950/80 backdrop-blur-md border border-neutral-700/50 text-[11px] font-bold text-orange-400 uppercase tracking-wider flex items-center gap-1.5 shadow-sm">
+            {/* Top & Bottom Scrim Overlay Gradients */}
+            <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-transparent to-black/60 pointer-events-none" />
+
+            <div className="absolute top-3 left-3 z-10">
+              <span className="px-2.5 py-1 rounded-full bg-neutral-950/80 backdrop-blur-md border border-neutral-700/60 text-[11px] font-bold text-orange-400 uppercase tracking-wider flex items-center gap-1.5 shadow-sm font-mono">
                 <Icon className="w-3.5 h-3.5 text-orange-400" />
                 <span>{label}</span>
               </span>
             </div>
 
-            {/* Favorite heart button */}
+            {/* Glass Favorite Heart Button */}
             <button
               onClick={handleToggleFavorite}
               disabled={togglingFav}
-              className="absolute top-3 right-3 p-2 rounded-full bg-neutral-950/80 border border-neutral-700/60 backdrop-blur-md hover:scale-110 transition-transform shadow-md"
+              className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/60 backdrop-blur-md border border-white/20 hover:scale-110 transition-all shadow-lg flex items-center justify-center z-10 cursor-pointer"
             >
-              <Heart className={`w-4 h-4 ${isFavorite ? 'fill-rose-500 text-rose-500' : 'text-neutral-300'}`} />
+              <Heart className={`w-4 h-4 transition-colors ${isFavorite ? 'fill-rose-500 text-rose-500' : 'text-zinc-300'}`} />
             </button>
-          </div>
+          </Link>
         ) : (
-          <div className="p-4 border-b border-neutral-800/60 bg-gradient-to-r from-orange-500/10 via-amber-500/5 to-transparent flex items-center justify-between">
-            <span className="px-2.5 py-1 rounded-full bg-orange-500/10 border border-orange-500/20 text-[11px] font-bold text-orange-400 uppercase tracking-wider inline-flex items-center gap-1.5">
+          <div className="p-3.5 border-b border-neutral-800/60 bg-gradient-to-r from-orange-500/10 via-amber-500/5 to-transparent flex items-center justify-between">
+            <span className="px-2.5 py-1 rounded-full bg-orange-500/10 border border-orange-500/20 text-[11px] font-bold text-orange-400 uppercase tracking-wider inline-flex items-center gap-1.5 font-mono">
               <Icon className="w-3.5 h-3.5" />
               <span>{label}</span>
             </span>
@@ -148,69 +156,65 @@ export function ContentCard(props: ContentCardProps) {
             <button
               onClick={handleToggleFavorite}
               disabled={togglingFav}
-              className="p-1.5 rounded-full bg-neutral-900 border border-neutral-800 hover:scale-110 transition-transform"
+              className="w-8 h-8 rounded-full bg-neutral-900 border border-neutral-800 hover:scale-110 transition-all flex items-center justify-center cursor-pointer"
             >
-              <Heart className={`w-4 h-4 ${isFavorite ? 'fill-rose-500 text-rose-500' : 'text-neutral-400'}`} />
+              <Heart className={`w-4 h-4 ${isFavorite ? 'fill-rose-500 text-rose-500' : 'text-zinc-400'}`} />
             </button>
           </div>
         )}
 
         {/* Body Content */}
-        <div className="p-5 space-y-3">
-          <div className="flex items-start justify-between gap-2">
-            <h3 className="text-lg font-bold text-white group-hover:text-amber-400 transition-colors line-clamp-1">
+        <div className="p-4.5 space-y-2.5">
+          {/* Recipe Title as Main Link (No Separate Button Required) */}
+          <Link href={detailHref} className="block group/title">
+            <h3 className="text-base font-bold text-white group-hover/title:text-orange-400 transition-colors line-clamp-2 leading-snug cursor-pointer">
               {title || 'Untitled Entity'}
             </h3>
+          </Link>
+
+          {/* Rating + Difficulty Badge Inline */}
+          <div className="flex items-center justify-between gap-2 pt-0.5">
+            {id && <StarRating entityId={id} readOnly size="sm" />}
             {difficulty && (
-              <span className="px-2 py-0.5 rounded bg-neutral-900 border border-neutral-800 text-[10px] font-semibold text-neutral-400 capitalize shrink-0">
+              <span className={`px-2 py-0.5 rounded border text-[10px] font-bold capitalize shrink-0 font-mono ${difficultyStyles[difficulty] || 'bg-neutral-900 text-zinc-400 border-neutral-800'}`}>
                 {difficulty}
               </span>
             )}
           </div>
 
-          {/* Star Rating Badge */}
-          {id && <StarRating entityId={id} readOnly size="sm" />}
-
+          {/* Summary Description */}
           {summary && (
-            <p className="text-xs text-neutral-400 line-clamp-2 leading-relaxed">
+            <p className="text-xs text-zinc-400 line-clamp-2 leading-relaxed font-sans pt-0.5">
               {summary}
             </p>
           )}
         </div>
       </div>
 
-      {/* Footer Metrics & Action Button */}
-      <div className="p-5 pt-0 space-y-4">
-        <div className="flex items-center gap-4 text-xs text-neutral-400 border-t border-neutral-800/80 pt-3">
+      {/* Footer Supporting Metadata */}
+      <div className="p-4.5 pt-0">
+        <div className="flex items-center gap-3.5 text-xs text-zinc-400 border-t border-neutral-800/80 pt-2.5 font-mono">
           {totalTime > 0 && (
-            <div className="flex items-center gap-1 font-mono">
+            <div className="flex items-center gap-1">
               <Clock className="w-3.5 h-3.5 text-amber-400" />
               <span>{totalTime}m</span>
             </div>
           )}
 
           {servings && (
-            <div className="flex items-center gap-1 font-mono">
+            <div className="flex items-center gap-1">
               <Users className="w-3.5 h-3.5 text-blue-400" />
               <span>{servings} servings</span>
             </div>
           )}
 
           {cuisine && (
-            <span className="ml-auto text-[11px] font-medium text-neutral-500 truncate">
+            <span className="ml-auto text-[11px] font-medium text-zinc-400 truncate">
               {cuisine}
             </span>
           )}
         </div>
-
-        <Link
-          href={`/content/${slug || id}`}
-          className="w-full py-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-neutral-700 text-xs font-semibold text-neutral-200 hover:text-white transition-all flex items-center justify-center gap-2"
-        >
-          <span>View Details</span>
-        </Link>
       </div>
     </div>
   );
 }
-

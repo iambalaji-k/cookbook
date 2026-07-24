@@ -19,7 +19,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { wakeLockController } from '../utils/wake-lock';
-import { convertIngredientUnit } from '../utils/unit-converter';
+import { convertIngredientUnit } from '../utils/ingredient-unit-converter';
 
 interface KitchenCookViewProps {
   entity: {
@@ -92,14 +92,17 @@ export function KitchenCookView({ entity }: KitchenCookViewProps) {
 
   // Sync timer when step changes
   useEffect(() => {
-    setIsTimerRunning(false);
     if (timerRef.current) clearInterval(timerRef.current);
+    const initialSeconds = (currentStep.timerMinutes && currentStep.timerMinutes > 0)
+      ? currentStep.timerMinutes * 60
+      : null;
 
-    if (currentStep.timerMinutes && currentStep.timerMinutes > 0) {
-      setTimerSecondsLeft(currentStep.timerMinutes * 60);
-    } else {
-      setTimerSecondsLeft(null);
-    }
+    const resetTimer = setTimeout(() => {
+      setIsTimerRunning(false);
+      setTimerSecondsLeft(initialSeconds);
+    }, 0);
+
+    return () => clearTimeout(resetTimer);
   }, [activeStepIdx, currentStep.timerMinutes]);
 
   // Timer countdown handler

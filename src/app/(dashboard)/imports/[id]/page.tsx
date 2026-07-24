@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { initializeDatabase } from '@/core/db/init-db';
 import { getRawImportById } from '@/modules/imports/services/import-service';
 import { ProcessImportButton } from '@/modules/imports/components/ProcessImportButton';
+import { DeleteImportButton } from '@/modules/imports/components/DeleteImportButton';
 import { FileText, ArrowLeft, ExternalLink, Clock, ShieldCheck } from 'lucide-react';
 
 export const revalidate = 0;
@@ -49,6 +50,10 @@ export default async function RawImportInspectorPage({
           </div>
 
           <ProcessImportButton importId={item.id} />
+          <DeleteImportButton
+            importId={item.id}
+            snippet={item.rawPayload.substring(0, 30)}
+          />
         </div>
 
         <h1 className="text-2xl font-extrabold text-white tracking-tight flex items-center gap-2">

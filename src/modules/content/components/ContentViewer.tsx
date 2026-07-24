@@ -16,10 +16,10 @@ import {
   Tag,
   Flame,
   Heart,
-  Scale
+  ChevronDown
 } from 'lucide-react';
 import { scaleIngredientPortion } from '../utils/portion-scaler';
-import { convertIngredientUnit } from '../utils/unit-converter';
+import { convertIngredientUnit } from '../utils/ingredient-unit-converter';
 import { AIStatsCard } from '@/modules/ai/components/AIStatsCard';
 import { StarRating } from './StarRating';
 import { RecipeCommentsSection } from './RecipeCommentsSection';
@@ -71,12 +71,13 @@ interface ContentViewerProps {
       approvedAt: string;
     }>;
   };
+  initialUnitSystem?: 'metric' | 'imperial';
 }
 
-export function ContentViewer({ entity }: ContentViewerProps) {
+export function ContentViewer({ entity, initialUnitSystem }: ContentViewerProps) {
   const router = useRouter();
   const [targetServings, setTargetServings] = useState<number>(entity.servings || 4);
-  const [unitSystem, setUnitSystem] = useState<'metric' | 'imperial'>('metric');
+  const [unitSystem, setUnitSystem] = useState<'metric' | 'imperial'>(initialUnitSystem || 'metric');
   const [isFavorite, setIsFavorite] = useState<boolean>(!!entity.isFavorite);
   const [togglingFav, setTogglingFav] = useState(false);
   const [showRevisions, setShowRevisions] = useState(false);
@@ -93,7 +94,7 @@ export function ContentViewer({ entity }: ContentViewerProps) {
     try {
       const res = await fetch(`/api/content/${entity.id}/favorite`, { method: 'PATCH' });
       if (!res.ok) {
-        setIsFavorite(!nextState); // rollback on error
+        setIsFavorite(!nextState);
       }
     } catch (e) {
       console.error(e);
@@ -139,123 +140,111 @@ export function ContentViewer({ entity }: ContentViewerProps) {
   });
 
   return (
-    <div className="space-y-8 max-w-4xl">
-      {/* Top Action Bar */}
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 w-full max-w-full animate-hud-reveal">
+      {/* Top Action Bar (Icon-only buttons with tooltips for Revisions, Edit, Delete) */}
+      <div className="flex items-center justify-between border-b border-neutral-800/80 pb-3">
         <Link
           href="/content"
-          className="text-xs font-medium text-neutral-400 hover:text-white flex items-center gap-1.5"
+          className="text-xs font-mono text-zinc-400 hover:text-white flex items-center gap-1.5 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Back to Library</span>
         </Link>
 
         <div className="flex items-center gap-2">
-          {/* Favorites Heart Button */}
-          <button
-            onClick={handleToggleFavorite}
-            disabled={togglingFav}
-            className={`px-3.5 py-1.5 rounded-lg border text-xs font-semibold transition-all flex items-center gap-1.5 ${
-              isFavorite
-                ? 'bg-rose-500/10 border-rose-500/30 text-rose-400 hover:bg-rose-500/20 shadow-[0_0_12px_rgba(244,63,94,0.2)]'
-                : 'bg-neutral-900 border-neutral-800 text-neutral-400 hover:text-white'
-            }`}
-
-          >
-            <Heart className={`w-4 h-4 ${isFavorite ? 'fill-rose-500 text-rose-500' : ''}`} />
-            <span>{isFavorite ? 'Favorited' : 'Add to Favorites'}</span>
-          </button>
-
+          {/* Start Cooking Mode Button */}
           {entity.instructions.length > 0 && (
             <Link
               href={`/content/${entity.slug}/cook`}
-              className="px-4 py-1.5 rounded-lg amber-gradient-bg text-white text-xs font-bold shadow-md hover:opacity-90 transition-opacity flex items-center gap-1.5"
+              className="px-3.5 py-1.5 rounded-xl amber-gradient-bg text-white text-xs font-bold shadow-md hover:scale-105 transition-all flex items-center gap-1.5"
             >
               <Flame className="w-4 h-4" />
-              <span>Start Cooking Mode 🍳</span>
+              <span>Cooking Mode 🍳</span>
             </Link>
           )}
 
+          {/* Icon-Only Revisions Button with Tooltip */}
           <button
             onClick={() => setShowRevisions(!showRevisions)}
-            className="px-3.5 py-1.5 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-300 text-xs font-medium hover:text-white transition-colors flex items-center gap-1.5"
+            title={`Revisions History (${entity.revisions.length})`}
+            className="p-2 rounded-xl bg-neutral-900/90 border border-neutral-800 text-zinc-300 hover:text-orange-400 hover:border-orange-500/40 transition-all cursor-pointer"
           >
-            <History className="w-3.5 h-3.5 text-orange-400" />
-            <span>{showRevisions ? 'Hide Audit History' : `Revisions (${entity.revisions.length})`}</span>
+            <History className="w-4 h-4" />
           </button>
 
+          {/* Icon-Only Edit Button with Tooltip */}
           <Link
             href={`/content/${entity.slug}/edit`}
-            className="px-3.5 py-1.5 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-300 text-xs font-medium hover:text-white transition-colors flex items-center gap-1.5"
+            title="Edit Recipe"
+            className="p-2 rounded-xl bg-neutral-900/90 border border-neutral-800 text-zinc-300 hover:text-white hover:border-neutral-700 transition-all"
           >
-            <Edit3 className="w-3.5 h-3.5" />
-            <span>Edit</span>
+            <Edit3 className="w-4 h-4" />
           </Link>
 
+          {/* Icon-Only Delete Button with Tooltip */}
           <button
             onClick={handleDelete}
             disabled={deleting}
-            className="px-3.5 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-medium hover:bg-red-500/20 transition-colors flex items-center gap-1.5"
+            title="Delete Recipe"
+            className="p-2 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 transition-all cursor-pointer disabled:opacity-50"
           >
-            <Trash2 className="w-3.5 h-3.5" />
-            <span>Delete</span>
+            <Trash2 className="w-4 h-4" />
           </button>
         </div>
       </div>
 
       {/* Header Banner */}
-      <div className="p-8 rounded-2xl glass-panel border border-neutral-800 relative overflow-hidden space-y-4">
+      <div className="p-6 sm:p-8 rounded-2xl elevation-level2 border border-neutral-800/90 relative overflow-hidden space-y-4 shadow-xl">
         {entity.imageUrl && (
-          <div className="h-64 w-full rounded-xl overflow-hidden mb-6 bg-neutral-900 relative">
+          <div className="h-80 sm:h-96 md:h-[420px] w-full rounded-xl overflow-hidden mb-6 bg-neutral-900 relative">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={entity.imageUrl} alt={entity.title} className="w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-transparent to-black/50 pointer-events-none" />
             
             {/* Favorite heart badge on image */}
             <button
               onClick={handleToggleFavorite}
-              className="absolute top-4 right-4 p-2.5 rounded-full bg-neutral-950/70 border border-neutral-700/80 text-white backdrop-blur-md hover:scale-110 transition-transform"
+              disabled={togglingFav}
+              className="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/60 border border-white/20 text-white backdrop-blur-md hover:scale-110 transition-transform flex items-center justify-center cursor-pointer shadow-lg z-10"
             >
-              <Heart className={`w-5 h-5 ${isFavorite ? 'fill-rose-500 text-rose-500' : 'text-neutral-300'}`} />
+              <Heart className={`w-5 h-5 transition-colors ${isFavorite ? 'fill-rose-500 text-rose-500' : 'text-zinc-300'}`} />
             </button>
           </div>
         )}
 
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <span className="px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-400 text-xs font-semibold uppercase tracking-wider">
+            <span className="px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-400 text-xs font-mono font-semibold uppercase tracking-wider">
               {entity.contentType.replace('_', ' ')}
             </span>
             {entity.cuisine && (
-              <span className="px-3 py-1 rounded-full bg-neutral-900 border border-neutral-800 text-neutral-300 text-xs font-medium">
+              <span className="px-3 py-1 rounded-full bg-neutral-900 border border-neutral-800 text-zinc-300 text-xs font-sans">
                 {entity.cuisine}
               </span>
             )}
             {entity.difficulty && (
-              <span className="px-3 py-1 rounded-full bg-neutral-900 border border-neutral-800 text-neutral-400 text-xs capitalize">
+              <span className="px-3 py-1 rounded-full bg-neutral-900 border border-neutral-800 text-zinc-400 text-xs font-mono capitalize">
                 {entity.difficulty}
               </span>
             )}
           </div>
 
-          {/* Interactive Star Rating Header Component */}
+          {/* Interactive Star Rating (No Rating Count) */}
           <StarRating entityId={entity.id} size="md" />
         </div>
 
-        <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight flex items-center gap-3">
+        <h1 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight flex items-center gap-3">
           <span>{entity.title}</span>
-          {isFavorite && (
-            <Heart className="w-6 h-6 fill-rose-500 text-rose-500 shrink-0 inline-block" />
-          )}
         </h1>
 
         {entity.summary && (
-          <p className="text-neutral-400 text-sm leading-relaxed max-w-2xl">
+          <p className="text-zinc-300 text-sm leading-relaxed max-w-3xl font-sans">
             {entity.summary}
           </p>
         )}
 
-        {/* Quick Details Bar */}
-        <div className="pt-4 flex flex-wrap items-center gap-6 text-xs text-neutral-300 border-t border-neutral-800/80">
+        {/* Quick Details Bar (No Unit System Text) */}
+        <div className="pt-3 flex flex-wrap items-center gap-6 text-xs text-zinc-300 border-t border-neutral-800/80 font-mono">
           {totalTime > 0 && (
             <div className="flex items-center gap-2">
               <Clock className="w-4 h-4 text-orange-400" />
@@ -267,45 +256,25 @@ export function ContentViewer({ entity }: ContentViewerProps) {
             <Users className="w-4 h-4 text-amber-400" />
             <span>Servings: {entity.servings}</span>
           </div>
-
-          <div className="flex items-center gap-2">
-            <Scale className="w-4 h-4 text-blue-400" />
-            <span>Unit System: <strong className="text-white capitalize">{unitSystem} (Default)</strong></span>
-          </div>
         </div>
       </div>
-
-      {/* AI Telemetry Stats Display Component */}
-      {(entity.aiProvider || entity.aiModel || entity.aiReasoningSummary) && (
-        <AIStatsCard
-          provider={entity.aiProvider}
-          model={entity.aiModel}
-          latencyMs={entity.aiLatencyMs}
-          tokenUsage={entity.aiTokenUsage}
-          confidence={entity.aiConfidence}
-          promptVersion={entity.aiPromptVersion}
-          reasoningSummary={entity.aiReasoningSummary}
-          timestamp={entity.aiTimestamp}
-        />
-      )}
 
       {/* Recipe Nutrition Engine Card */}
       <RecipeNutritionCard recipeId={entity.id} servings={targetServings} />
 
-      {/* Controls Bar: Serving Size Portion Scaler & Metric/Imperial Unit Selector */}
+      {/* Controls Bar: Serving Size Portion Scaler & Unit Selector */}
       {entity.ingredients.length > 0 && (
-        <div className="p-4 rounded-xl glass-panel border border-neutral-800 flex flex-wrap items-center justify-between gap-4">
-          {/* Servings Controls */}
+        <div className="p-4 rounded-xl elevation-level2 border border-neutral-800 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 text-xs font-semibold text-white">
+            <div className="flex items-center gap-2 text-xs font-bold text-white font-sans">
               <Users className="w-4 h-4 text-orange-400" />
-              <span>Servings:</span>
+              <span>Portion Scaler:</span>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 font-mono">
               <button
                 onClick={() => setTargetServings(Math.max(1, targetServings - 1))}
-                className="p-1.5 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-300 hover:text-white hover:bg-neutral-800 transition-colors"
+                className="p-1.5 rounded-lg bg-neutral-900 border border-neutral-800 text-zinc-300 hover:text-white hover:bg-neutral-800 transition-colors cursor-pointer"
               >
                 <Minus className="w-4 h-4" />
               </button>
@@ -316,7 +285,7 @@ export function ContentViewer({ entity }: ContentViewerProps) {
 
               <button
                 onClick={() => setTargetServings(targetServings + 1)}
-                className="p-1.5 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-300 hover:text-white hover:bg-neutral-800 transition-colors"
+                className="p-1.5 rounded-lg bg-neutral-900 border border-neutral-800 text-zinc-300 hover:text-white hover:bg-neutral-800 transition-colors cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
               </button>
@@ -325,25 +294,25 @@ export function ContentViewer({ entity }: ContentViewerProps) {
         </div>
       )}
 
-      {/* Main Grid: Ingredients & Instructions */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {/* Ingredients Column */}
+      {/* Main Responsive Grid: Ingredients & Instructions */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+        {/* Ingredients Column (Sticky Sidebar on Desktop) */}
         {entity.ingredients.length > 0 && (
-          <div className="md:col-span-1 p-6 rounded-2xl glass-panel border border-neutral-800 space-y-4">
+          <div className="md:col-span-1 p-5 sm:p-6 rounded-2xl elevation-level2 border border-neutral-800/90 space-y-4 md:sticky md:top-20">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-neutral-800 pb-3">
-              <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                <span>Ingredients</span>
+              <h2 className="text-base font-bold text-white font-sans">
+                Ingredients
               </h2>
 
-              {/* Ingredient-wise Unit System Toggle */}
-              <div className="p-1 rounded-xl bg-neutral-900 border border-neutral-800 flex items-center gap-1 text-[11px]">
+              {/* Unit System Toggle */}
+              <div className="p-1 rounded-xl bg-neutral-900 border border-neutral-800 flex items-center gap-1 text-[11px] font-mono">
                 <button
                   type="button"
                   onClick={() => setUnitSystem('metric')}
-                  className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
+                  className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
                     unitSystem === 'metric'
                       ? 'amber-gradient-bg text-white shadow-md'
-                      : 'text-neutral-400 hover:text-white'
+                      : 'text-zinc-400 hover:text-white'
                   }`}
                 >
                   Metric
@@ -351,10 +320,10 @@ export function ContentViewer({ entity }: ContentViewerProps) {
                 <button
                   type="button"
                   onClick={() => setUnitSystem('imperial')}
-                  className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
+                  className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
                     unitSystem === 'imperial'
                       ? 'amber-gradient-bg text-white shadow-md'
-                      : 'text-neutral-400 hover:text-white'
+                      : 'text-zinc-400 hover:text-white'
                   }`}
                 >
                   Imperial
@@ -362,17 +331,17 @@ export function ContentViewer({ entity }: ContentViewerProps) {
               </div>
             </div>
 
-            <ul className="space-y-3 text-xs">
+            <ul className="space-y-2.5 text-xs font-sans">
               {scaledIngredients.map((ing, idx) => (
-                <li key={idx} className="p-3 rounded-xl bg-neutral-900/60 border border-neutral-800/80 flex items-start gap-2">
+                <li key={idx} className="p-3 rounded-xl bg-neutral-900/80 border border-neutral-800/80 flex items-start gap-2.5">
                   <CheckCircle2 className="w-4 h-4 text-orange-400 shrink-0 mt-0.5" />
                   <div>
-                    <span className="font-semibold text-white">
+                    <span className="font-semibold text-zinc-100">
                       {ing.displayAmount ? `${ing.displayAmount} ` : ''}
                       {ing.itemName}
                     </span>
                     {ing.notes && (
-                      <span className="block text-neutral-400 italic text-[11px] mt-0.5">
+                      <span className="block text-zinc-400 italic text-[11px] mt-0.5 font-mono">
                         ({ing.notes})
                       </span>
                     )}
@@ -385,21 +354,21 @@ export function ContentViewer({ entity }: ContentViewerProps) {
 
         {/* Instructions Column */}
         <div className={entity.ingredients.length > 0 ? "md:col-span-2 space-y-4" : "md:col-span-3 space-y-4"}>
-          <div className="p-6 rounded-2xl glass-panel border border-neutral-800 space-y-6">
-            <h2 className="text-lg font-bold text-white">Instructions & Preparation</h2>
+          <div className="p-5 sm:p-6 rounded-2xl elevation-level2 border border-neutral-800/90 space-y-6">
+            <h2 className="text-base font-bold text-white font-sans">Instructions & Preparation</h2>
 
-            <div className="space-y-6">
+            <div className="space-y-5">
               {entity.instructions.map((step, idx) => (
                 <div key={idx} className="flex gap-4">
-                  <div className="w-8 h-8 rounded-full amber-gradient-bg text-white font-bold text-sm flex items-center justify-center shrink-0 shadow-md">
+                  <div className="w-8 h-8 rounded-xl amber-gradient-bg text-white font-mono font-bold text-sm flex items-center justify-center shrink-0 shadow-md">
                     {step.stepNumber}
                   </div>
-                  <div className="space-y-2 pt-1">
-                    <p className="text-sm text-neutral-200 leading-relaxed">
+                  <div className="space-y-1.5 pt-0.5">
+                    <p className="text-sm text-zinc-200 leading-relaxed font-sans">
                       {step.instructionText}
                     </p>
                     {step.timerMinutes && (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-neutral-900 border border-neutral-800 text-orange-400 text-xs font-medium">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-neutral-900 border border-neutral-800 text-orange-400 text-xs font-mono font-medium">
                         <Clock className="w-3.5 h-3.5" />
                         <span>Timer: {step.timerMinutes} minutes</span>
                       </span>
@@ -412,12 +381,12 @@ export function ContentViewer({ entity }: ContentViewerProps) {
 
           {/* Tags Footer */}
           {entity.tags && entity.tags.length > 0 && (
-            <div className="p-4 rounded-xl glass-panel border border-neutral-800 flex items-center gap-2 flex-wrap text-xs">
-              <Tag className="w-4 h-4 text-neutral-500" />
+            <div className="p-4 rounded-xl elevation-level2 border border-neutral-800 flex items-center gap-2 flex-wrap text-xs font-mono">
+              <Tag className="w-4 h-4 text-zinc-500" />
               {entity.tags.map((tag, idx) => {
                 const tagName = typeof tag === 'string' ? tag : tag.tagName || '';
                 return (
-                  <span key={idx} className="px-2.5 py-1 rounded-full bg-neutral-900 border border-neutral-800 text-neutral-300">
+                  <span key={idx} className="px-2.5 py-1 rounded-full bg-neutral-900 border border-neutral-800 text-zinc-300">
                     #{tagName}
                   </span>
                 );
@@ -430,31 +399,53 @@ export function ContentViewer({ entity }: ContentViewerProps) {
       {/* Recipe Comments Section Component */}
       <RecipeCommentsSection entityId={entity.id} />
 
-      {/* Revision History Drawer / Panel */}
+      {/* Revision History Drawer */}
       {showRevisions && (
-        <div className="p-6 rounded-2xl glass-panel border border-neutral-800 space-y-4">
-          <h2 className="text-lg font-bold text-white flex items-center gap-2">
+        <div className="p-5 sm:p-6 rounded-2xl elevation-level2 border border-neutral-800 space-y-4">
+          <h2 className="text-base font-bold text-white flex items-center gap-2 font-sans">
             <History className="w-5 h-5 text-orange-400" />
-            Immutable Revision Audit History
+            Revision Audit History
           </h2>
 
-          <div className="space-y-3 text-xs">
+          <div className="space-y-3 text-xs font-mono">
             {entity.revisions.length === 0 ? (
-              <p className="text-neutral-500 italic">No previous revisions recorded yet.</p>
+              <p className="text-zinc-500 italic">No previous revisions recorded yet.</p>
             ) : (
               entity.revisions.map((rev) => (
                 <div key={rev.id} className="p-4 rounded-xl bg-neutral-900/80 border border-neutral-800 space-y-1">
                   <div className="flex items-center justify-between font-semibold">
                     <span className="text-orange-400">Revision #{rev.revisionNumber}</span>
-                    <span className="text-neutral-500">{new Date(rev.approvedAt).toLocaleString()}</span>
+                    <span className="text-zinc-400">{new Date(rev.approvedAt).toLocaleString()}</span>
                   </div>
-                  <p className="text-neutral-300">{rev.changeSummary || 'No revision notes provided'}</p>
-                  <p className="text-neutral-500 text-[11px]">Approved by: {rev.approvedBy}</p>
+                  <p className="text-zinc-300">{rev.changeSummary || 'No revision notes provided'}</p>
+                  <p className="text-zinc-500 text-[11px]">Approved by: {rev.approvedBy}</p>
                 </div>
               ))
             )}
           </div>
         </div>
+      )}
+
+      {/* AI Execution Stats & Gateway Provenance (Collapsible at Bottom of Page) */}
+      {(entity.aiProvider || entity.aiModel || entity.aiReasoningSummary) && (
+        <details className="rounded-xl elevation-level2 border border-neutral-800 p-4 font-mono text-xs cursor-pointer group">
+          <summary className="font-bold text-zinc-400 hover:text-white flex items-center justify-between outline-none select-none">
+            <span>AI Execution Stats & Gateway Provenance</span>
+            <ChevronDown className="w-4 h-4 text-zinc-400 group-open:rotate-180 transition-transform" />
+          </summary>
+          <div className="pt-3">
+            <AIStatsCard
+              provider={entity.aiProvider}
+              model={entity.aiModel}
+              latencyMs={entity.aiLatencyMs}
+              tokenUsage={entity.aiTokenUsage}
+              confidence={entity.aiConfidence}
+              promptVersion={entity.aiPromptVersion}
+              reasoningSummary={entity.aiReasoningSummary}
+              timestamp={entity.aiTimestamp}
+            />
+          </div>
+        </details>
       )}
     </div>
   );

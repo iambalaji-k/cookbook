@@ -18,6 +18,11 @@ export default async function ContentEditPage({
     notFound();
   }
 
+  const mappedInitialData = {
+    ...entity,
+    tags: entity.tags?.map((t: { tagName: string }) => t.tagName) ?? [],
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -29,7 +34,7 @@ export default async function ContentEditPage({
         </p>
       </div>
 
-      <ContentForm initialData={entity as any} isEditing />
+      <ContentForm initialData={mappedInitialData as any} isEditing />
     </div>
   );
 }

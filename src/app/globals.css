@@ -2,51 +2,201 @@
 
 @layer base {
   :root {
-    --background: 20 14.3% 4.1%;
-    --foreground: 0 0% 95%;
-    --card: 24 9.8% 7.8%;
-    --card-foreground: 0 0% 95%;
-    --popover: 20 14.3% 4.1%;
-    --popover-foreground: 0 0% 95%;
-    --primary: 34.6 100% 50%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 12 6.5% 15.1%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 12 6.5% 15.1%;
-    --muted-foreground: 24 5.4% 63.9%;
-    --accent: 12 6.5% 15.1%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 12 6.5% 15.1%;
-    --input: 12 6.5% 15.1%;
-    --ring: 34.6 100% 50%;
-    --radius: 0.75rem;
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 4.5%;
+    --card-foreground: 0 0% 98%;
+    
+    /* Semantic Colors */
+    --color-creation: #ff6b00;    /* Orange: Creation & Recipes */
+    --color-imports: #00f0ff;     /* Blue/Cyan: Imports */
+    --color-published: #10b981;   /* Green/Emerald: Published / Revisions */
+    --color-drafts: #ffb703;      /* Yellow/Amber: Drafts & AI Staging */
+
+    /* Accessible Text Colors */
+    --text-primary: #f4f4f5;      /* High contrast zinc-100 */
+    --text-secondary: #d4d4d8;    /* High contrast zinc-300 */
+    --text-muted: #a1a1aa;        /* Accessible zinc-400 */
+
+    /* Elevation Levels */
+    --bg-level1: #080706;         /* Level 1: Deep Background */
+    --bg-level2: #12100e;         /* Level 2: Surface Panels */
+    --bg-level3: #1a1715;         /* Level 3: Elevated Cards */
+    
+    --border-level2: rgba(255, 255, 255, 0.08);
+    --border-level3: rgba(255, 255, 255, 0.14);
   }
 }
 
 body {
-  background-color: #0d0c0b;
-  color: #f3f3f3;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  background-color: var(--bg-level1);
+  color: var(--text-primary);
   min-height: 100vh;
   margin: 0;
+  overflow-x: hidden;
 }
 
-/* Custom Glassmorphism & Accent Utilities */
+/* Custom Font Utilities */
+.font-hud {
+  font-family: var(--font-orbitron), system-ui, sans-serif;
+  letter-spacing: 0.04em;
+}
+
+.font-mono {
+  font-family: var(--font-jetbrains), monospace;
+}
+
+/* Cybernetic Grid & Visual Details */
+.bg-cyber-grid {
+  background-image: 
+    linear-gradient(to right, rgba(255, 107, 0, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 107, 0, 0.03) 1px, transparent 1px);
+  background-size: 36px 36px;
+}
+
+/* 3-Level Elevation Architecture */
+.elevation-level2 {
+  background: var(--bg-level2);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-level2);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.elevation-level3 {
+  background: var(--bg-level3);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-level3);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.elevation-level3:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6), 0 0 20px rgba(255, 107, 0, 0.15);
+  border-color: rgba(255, 107, 0, 0.4);
+}
+
+.elevation-level3-cyan:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 240, 255, 0.15);
+  border-color: rgba(0, 240, 255, 0.4);
+}
+
+.elevation-level3-amber:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6), 0 0 20px rgba(255, 183, 3, 0.15);
+  border-color: rgba(255, 183, 3, 0.4);
+}
+
+.elevation-level3-emerald:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6), 0 0 20px rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+/* Glassmorphism Legacy Panels */
 .glass-panel {
-  background: rgba(26, 23, 20, 0.75);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(18, 16, 15, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+/* Primary CTA Glowing Pulse Animation */
+.cta-glow-pulse {
+  position: relative;
+  background: linear-gradient(135deg, #ea580c 0%, #d97706 100%);
+  box-shadow: 0 0 15px rgba(234, 88, 12, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.3);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.cta-glow-pulse:hover {
+  transform: scale(1.04) translateY(-1px);
+  box-shadow: 0 0 25px rgba(234, 88, 12, 0.7), inset 0 1px 1px rgba(255, 255, 255, 0.5);
+}
+
+.cta-glow-pulse:active {
+  transform: scale(0.98);
+}
+
+/* Accent Gradients & Text */
 .amber-gradient-text {
-  background: linear-gradient(135deg, #f97316 0%, #fbbf24 100%);
+  background: linear-gradient(135deg, #ff6b00 0%, #ffc107 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.cyan-gradient-text {
+  background: linear-gradient(135deg, #00f0ff 0%, #3b82f6 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
 .amber-gradient-bg {
-  background: linear-gradient(135deg, #ea580c 0%, #d97706 100%);
+  background: linear-gradient(135deg, #e65100 0%, #ff8f00 100%);
+}
+
+.glow-pill-amber {
+  background: rgba(255, 107, 0, 0.12);
+  border: 1px solid rgba(255, 107, 0, 0.3);
+  color: #ff9800;
+  box-shadow: 0 0 12px rgba(255, 107, 0, 0.12);
+}
+
+.glow-pill-cyan {
+  background: rgba(0, 240, 255, 0.12);
+  border: 1px solid rgba(0, 240, 255, 0.3);
+  color: #00e5ff;
+  box-shadow: 0 0 12px rgba(0, 240, 255, 0.12);
+}
+
+.glow-pill-emerald {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #34d399;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.12);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #080706;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 107, 0, 0.25);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 107, 0, 0.6);
+}
+
+/* Tooltip Popup */
+.group:hover .tooltip-popup {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+/* Stagger Animation Effects */
+@keyframes fadeInSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-hud-reveal {
+  animation: fadeInSlideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }

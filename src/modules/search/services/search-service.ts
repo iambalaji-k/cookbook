@@ -1,7 +1,6 @@
 import { db } from '@/core/db';
 import { sql } from 'drizzle-orm';
 import { getContentEntityById } from '@/modules/content/services/content-service';
-import { syncEntityToFTS } from '@/core/db/init-db';
 
 export interface SearchResultItem {
   id: string;
@@ -15,6 +14,28 @@ export interface SearchResultItem {
   matchScore?: number;
   snippet?: string;
   matchedFields?: string[];
+}
+
+interface FTSRow {
+  entity_id: string;
+  title?: string;
+  summary?: string;
+  cuisine?: string;
+  rank?: number;
+  title_snippet?: string;
+  ingredient_snippet?: string;
+  instruction_snippet?: string;
+}
+
+interface FallbackRow {
+  id: string;
+  title: string;
+  slug: string;
+  content_type: string;
+  summary?: string | null;
+  cuisine?: string | null;
+  difficulty?: string | null;
+  image_url?: string | null;
 }
 
 /**
@@ -62,10 +83,10 @@ export async function searchContentFTS(
       LIMIT ${limit};
     `);
 
-    const rawRows = ftsResults.rows || [];
+    const rawRows = (ftsResults.rows || []) as unknown as FTSRow[];
     const results: SearchResultItem[] = [];
 
-    for (const row of rawRows as any[]) {
+    for (const row of rawRows) {
       const entity = await getContentEntityById(row.entity_id);
       if (!entity) continue;
 
@@ -119,7 +140,8 @@ export async function searchContentFTS(
   `);
 
   const fallbackResults: SearchResultItem[] = [];
-  for (const row of (fallbackRows.rows || []) as any[]) {
+  const rows = (fallbackRows.rows || []) as unknown as FallbackRow[];
+  for (const row of rows) {
     if (contentType && contentType !== 'all' && row.content_type !== contentType) {
       continue;
     }

@@ -51,6 +51,9 @@ Thumbs.db
 
 # Testing & Coverage
 /coverage
+.playwright-cli/
+bug-screenshots/
+.commandcode/
 
 # Vercel & Deployment
 .vercel

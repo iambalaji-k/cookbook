@@ -6,6 +6,7 @@ export const sourceTypeEnum = z.enum([
   'pdf',
   'plain_text',
   'transcript',
+  'youtube',
 ]);
 
 export type SourceType = z.infer<typeof sourceTypeEnum>;

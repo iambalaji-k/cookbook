@@ -3,7 +3,7 @@ import { sql } from 'drizzle-orm';
 import { contentEntities, ingredients } from '@/core/db/schema/content';
 import { recipeNutritionCache } from '../database/schema';
 import { findApprovedFoodMapping } from './nutrition-service';
-import { convertQuantityToGrams } from '../utils/unit-converter';
+import { convertQuantityToGrams } from '../utils/quantity-to-grams-converter';
 import { calculateDailyValuePercentages, DVProfile } from '../utils/daily-values';
 import {
   FullNutritionProfile,
@@ -248,9 +248,16 @@ export async function getRecipeNutrition(recipeId: string): Promise<RecipeNutrit
       const total = JSON.parse(row.totalNutrition);
       const dvPercentages = calculateDailyValuePercentages(perServing, 'US_FDA');
 
+      // Fetch actual servings from the recipe entity
+      const [recipe] = await db
+        .select({ servings: contentEntities.servings })
+        .from(contentEntities)
+        .where(sql`id = ${recipeId}`);
+      const servings = recipe?.servings && recipe.servings > 0 ? recipe.servings : 4;
+
       return {
         recipeId: row.recipeId,
-        servings: 4, // default if not fetched
+        servings,
         nutritionCoveragePercent: row.nutritionCoveragePercent,
         mappedIngredientCount: row.mappedIngredientCount,
         totalIngredientCount: row.totalIngredientCount,

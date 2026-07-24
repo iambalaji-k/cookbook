@@ -7,6 +7,7 @@ import {
   FileText, 
   Globe, 
   Camera, 
+  Video,
   Save, 
   Sparkles, 
   RefreshCw, 
@@ -16,14 +17,17 @@ import {
 
 export function ImportForm() {
   const router = useRouter();
-  const [sourceType, setSourceType] = useState<'plain_text' | 'url' | 'ocr_image'>('plain_text');
+  const [sourceType, setSourceType] = useState<'plain_text' | 'url' | 'ocr_image' | 'youtube'>('plain_text');
   const [sourceUrl, setSourceUrl] = useState('');
   const [rawPayload, setRawPayload] = useState('');
   const [autoProcessAI, setAutoProcessAI] = useState(true);
 
   const [scraping, setScraping] = useState(false);
+  const [extractingCaptions, setExtractingCaptions] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [youtubeUrl, setYoutubeUrl] = useState('');
+  const [videoTitle, setVideoTitle] = useState<string | null>(null);
 
   // Web Scraper handler
   const handleScrape = async () => {
@@ -51,8 +55,36 @@ export function ImportForm() {
     }
   };
 
+  // YouTube Caption Extractor handler
+  const handleExtractCaptions = async () => {
+    if (!youtubeUrl.trim()) return;
+    setExtractingCaptions(true);
+    setError(null);
+    setVideoTitle(null);
+
+    try {
+      const res = await fetch('/api/imports/youtube-caption', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: youtubeUrl }),
+      });
+
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.message || 'Caption extraction failed');
+      }
+
+      setRawPayload(json.rawPayload);
+      setVideoTitle(json.videoTitle || null);
+    } catch (err: any) {
+      setError(err.message || 'Failed to extract YouTube captions');
+    } finally {
+      setExtractingCaptions(false);
+    }
+  };
+
   // OCR Completion handler
-  const handleOCRComplete = (extractedText: string) => {
+  const handleOCRComplete = (extractedText: string, _imagePreviewUrl?: string) => {
     setRawPayload(extractedText);
   };
 
@@ -74,7 +106,7 @@ export function ImportForm() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sourceType,
-          sourceUrl: sourceUrl.trim() || null,
+          sourceUrl: sourceType === 'youtube' ? youtubeUrl.trim() || null : sourceUrl.trim() || null,
           rawPayload,
           metadataJSON: JSON.stringify({ ingestedVia: 'import_form', autoProcessAI }),
         }),
@@ -115,6 +147,7 @@ export function ImportForm() {
         {[
           { id: 'plain_text', label: 'Text Paste', icon: FileText },
           { id: 'url', label: 'Web URL Scraper', icon: Globe },
+          { id: 'youtube', label: 'YouTube Import', icon: Video },
           { id: 'ocr_image', label: 'OCR Photo Scanner', icon: Camera },
         ].map((tab) => {
           const Icon = tab.icon;
@@ -162,7 +195,39 @@ export function ImportForm() {
         </div>
       )}
 
-      {/* Tab 3: OCR Photo Scanner */}
+      {/* Tab 3: YouTube Import */}
+      {sourceType === 'youtube' && (
+        <div className="p-6 rounded-2xl glass-panel border border-neutral-800 space-y-4 text-xs">
+          <label className="block font-bold text-white text-sm">Enter YouTube Recipe Video URL</label>
+          <p className="text-neutral-400 text-[11px]">Extracts captions/transcript and video metadata from cooking/recipe videos.</p>
+          <div className="flex gap-2">
+            <input
+              type="url"
+              value={youtubeUrl}
+              onChange={(e) => setYoutubeUrl(e.target.value)}
+              placeholder="https://www.youtube.com/watch?v=..."
+              className="flex-1 px-3 py-2.5 rounded-xl bg-neutral-900 border border-neutral-800 text-white font-mono focus:outline-none focus:border-amber-500"
+            />
+            <button
+              type="button"
+              onClick={handleExtractCaptions}
+              disabled={extractingCaptions || !youtubeUrl.trim()}
+              className="px-4 py-2.5 rounded-xl amber-gradient-bg text-white font-bold flex items-center gap-2 disabled:opacity-50"
+            >
+              {extractingCaptions ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Video className="w-4 h-4" />}
+              <span>{extractingCaptions ? 'Extracting Captions...' : 'Fetch Captions'}</span>
+            </button>
+          </div>
+          {videoTitle && (
+            <div className="flex items-center gap-2 p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              <span className="text-emerald-400 font-medium text-[11px]">{videoTitle}</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Tab 4: OCR Photo Scanner */}
       {sourceType === 'ocr_image' && (
         <OCRScanner onScanComplete={handleOCRComplete} />
       )}

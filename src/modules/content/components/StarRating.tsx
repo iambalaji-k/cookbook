@@ -19,7 +19,6 @@ export function StarRating({
   size = 'md',
 }: StarRatingProps) {
   const [average, setAverage] = useState<number>(initialAverage);
-  const [totalRatings, setTotalRatings] = useState<number>(initialTotalRatings);
   const [hoverRating, setHoverRating] = useState<number | null>(null);
   const [userRating, setUserRating] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -34,7 +33,6 @@ export function StarRating({
           const data = await res.json();
           if (isMounted) {
             setAverage(data.averageRating || 0);
-            setTotalRatings(data.totalRatings || 0);
           }
         }
       } catch (e) {
@@ -60,7 +58,6 @@ export function StarRating({
       if (res.ok) {
         const data = await res.json();
         setAverage(data.averageRating);
-        setTotalRatings(data.totalRatings);
       }
     } catch (e) {
       console.error('Failed to submit rating:', e);
@@ -69,37 +66,44 @@ export function StarRating({
     }
   };
 
-  const starSizes = {
-    sm: 'w-3.5 h-3.5',
-    md: 'w-4 h-4',
-    lg: 'w-5 h-5',
-  };
+  const displayRatingVal = average > 0 ? average.toFixed(1) : '-';
 
-  const displayRating = hoverRating !== null ? hoverRating : (userRating || Math.round(average));
+  // Swiggy & Zomato Style Rating Badge (No total rating count)
+  if (readOnly) {
+    return (
+      <div className="inline-flex items-center font-mono">
+        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-600 text-white font-bold text-[11px] shadow-sm tracking-tight">
+          <span>{displayRatingVal}</span>
+          <Star className="w-3 h-3 fill-white text-white shrink-0" />
+        </span>
+      </div>
+    );
+  }
 
+  // Interactive Rating Mode (for Detail Page - No total rating count)
   return (
-    <div className="inline-flex items-center gap-2">
-      <div className="flex items-center gap-0.5" onMouseLeave={() => setHoverRating(null)}>
+    <div className="inline-flex items-center gap-2 font-mono">
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-600 text-white font-bold text-xs shadow-md">
+        <span>{displayRatingVal}</span>
+        <Star className="w-3.5 h-3.5 fill-white text-white shrink-0" />
+      </span>
+
+      <div className="flex items-center gap-0.5 ml-1" onMouseLeave={() => setHoverRating(null)}>
         {[1, 2, 3, 4, 5].map((star) => {
           const isFilled = star <= (hoverRating !== null ? hoverRating : average);
-          const isUserSelected = userRating === star;
-
           return (
             <button
               key={star}
               type="button"
-              disabled={readOnly || submitting}
-              onMouseEnter={() => !readOnly && setHoverRating(star)}
+              disabled={submitting}
+              onMouseEnter={() => setHoverRating(star)}
               onClick={() => handleRate(star)}
-              className={`p-0.5 transition-transform ${
-                !readOnly ? 'hover:scale-110 cursor-pointer' : 'cursor-default'
-              } ${submitting ? 'opacity-50' : ''}`}
-
+              className="p-0.5 hover:scale-110 cursor-pointer transition-transform"
             >
               <Star
-                className={`${starSizes[size]} ${
+                className={`w-4 h-4 ${
                   isFilled
-                    ? 'fill-amber-400 text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]'
+                    ? 'fill-amber-400 text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.5)]'
                     : 'fill-neutral-800 text-neutral-600'
                 }`}
               />
@@ -107,13 +111,6 @@ export function StarRating({
           );
         })}
       </div>
-
-      {average > 0 && (
-        <span className="text-xs font-semibold text-neutral-300 flex items-center gap-1">
-          <span>{average.toFixed(1)}</span>
-          <span className="text-neutral-500 font-normal">({totalRatings})</span>
-        </span>
-      )}
     </div>
   );
 }

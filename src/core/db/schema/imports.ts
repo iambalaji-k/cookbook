@@ -7,7 +7,7 @@ import { sqliteTable, text } from 'drizzle-orm/sqlite-core';
 export const rawImports = sqliteTable('raw_imports', {
   id: text('id').primaryKey(), // UUID
   sourceType: text('source_type', {
-    enum: ['url', 'ocr_image', 'pdf', 'plain_text', 'transcript'],
+    enum: ['url', 'ocr_image', 'pdf', 'plain_text', 'transcript', 'youtube'],
   }).notNull(),
   sourceUrl: text('source_url'),
   rawPayload: text('raw_payload').notNull(),

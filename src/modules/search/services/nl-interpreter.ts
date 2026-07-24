@@ -52,14 +52,16 @@ export async function interpretNaturalLanguageQuery(
       maxRetries: 1,
     });
 
+    const finalKeywords = aiResult.data.keywords.length > 0 ? aiResult.data.keywords : [text];
+
     return {
       rawQuery: text,
-      keywords: aiResult.data.keywords.length > 0 ? aiResult.data.keywords : [text],
+      keywords: finalKeywords,
       maxTotalTimeMinutes: aiResult.data.maxTotalTimeMinutes ?? extractTimeFromRegex(text),
       cuisine: aiResult.data.cuisine ?? extractCuisineFromRegex(text),
       difficulty: aiResult.data.difficulty ?? null,
       contentType: aiResult.data.contentType ?? null,
-      summary: aiResult.data.summary || `Parsed query for ${aiResult.data.keywords.join(', ')}`,
+      summary: aiResult.data.summary || `Parsed query for ${finalKeywords.join(', ')}`,
     };
   } catch (aiErr) {
     console.warn('AI Query Interpreter Fallback:', aiErr);

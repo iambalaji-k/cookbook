@@ -57,7 +57,8 @@ export function ContentForm({ initialData, isEditing = false }: ContentFormProps
 
   const handleTitleChange = (val: string) => {
     setTitle(val);
-    if (!isEditing && (!slug || slug === generateSlug(title))) {
+    const baseSlug = val.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-').replace(/-+$/, '');
+    if (!slug || slug.startsWith(baseSlug)) {
       setSlug(generateSlug(val));
     }
   };

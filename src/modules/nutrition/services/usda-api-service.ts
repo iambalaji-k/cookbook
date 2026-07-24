@@ -4,6 +4,24 @@ import { CreateFoodInput } from '../validation/nutrition-schema';
  * USDA FoodData Central (FDC) API Integration
  * API Guide: https://fdc.nal.usda.gov/api-guide.html
  */
+interface USDANutrient {
+  nutrientNumber?: string | number;
+  nutrientId?: string | number;
+  value?: number;
+  amount?: number;
+}
+
+interface USDAFood {
+  fdcId?: number;
+  description?: string;
+  additionalDescriptions?: string;
+  foodNutrients?: USDANutrient[];
+}
+
+/**
+ * USDA FoodData Central (FDC) API Integration
+ * API Guide: https://fdc.nal.usda.gov/api-guide.html
+ */
 export async function searchUSDAFoodDataCentral(
   query: string,
   apiKey?: string
@@ -28,7 +46,7 @@ export async function searchUSDAFoodDataCentral(
       return [];
     }
 
-    return data.foods.map((food: any) => mapUSDAFoodToRecord(food));
+    return data.foods.map((food: USDAFood) => mapUSDAFoodToRecord(food));
   } catch (error) {
     console.error('Error querying USDA FoodData Central API:', error);
     throw error;
@@ -38,11 +56,11 @@ export async function searchUSDAFoodDataCentral(
 /**
  * Maps USDA FDC Food item JSON response to our standard 100g CreateFoodInput format.
  */
-function mapUSDAFoodToRecord(food: any): CreateFoodInput {
+function mapUSDAFoodToRecord(food: USDAFood): CreateFoodInput {
   const nutrients: Record<string, number> = {};
 
   if (food.foodNutrients && Array.isArray(food.foodNutrients)) {
-    food.foodNutrients.forEach((n: any) => {
+    food.foodNutrients.forEach((n: USDANutrient) => {
       const num = String(n.nutrientNumber || n.nutrientId);
       const val = Number(n.value || n.amount || 0);
       if (!isNaN(val)) {
@@ -66,6 +84,25 @@ function mapUSDAFoodToRecord(food: any): CreateFoodInput {
   const vitA = nutrients['1106'] ?? nutrients['320'] ?? 0;
   const vitD = nutrients['1114'] ?? nutrients['324'] ?? 0;
   const cholesterol = nutrients['1257'] ?? nutrients['601'] ?? 0;
+  const vitB1 = nutrients['1165'] ?? nutrients['404'] ?? 0;
+  const vitB2 = nutrients['1166'] ?? nutrients['405'] ?? 0;
+  const vitB3 = nutrients['1167'] ?? nutrients['406'] ?? 0;
+  const vitB5 = nutrients['1170'] ?? nutrients['410'] ?? 0;
+  const vitB6 = nutrients['1175'] ?? nutrients['415'] ?? 0;
+  const vitB7 = nutrients['1176'] ?? nutrients['416'] ?? 0;
+  const vitB9 = nutrients['1187'] ?? nutrients['417'] ?? 0;
+  const vitB12 = nutrients['1178'] ?? nutrients['418'] ?? 0;
+  const vitE = nutrients['1109'] ?? nutrients['323'] ?? 0;
+  const vitK = nutrients['1185'] ?? nutrients['430'] ?? 0;
+  const magnesium = nutrients['1090'] ?? nutrients['304'] ?? 0;
+  const zinc = nutrients['1095'] ?? nutrients['309'] ?? 0;
+  const copper = nutrients['1098'] ?? nutrients['312'] ?? 0;
+  const selenium = nutrients['1103'] ?? nutrients['317'] ?? 0;
+  const manganese = nutrients['1101'] ?? nutrients['315'] ?? 0;
+  const phosphorus = nutrients['1091'] ?? nutrients['305'] ?? 0;
+  const omega3 = nutrients['1404'] ?? nutrients['851'] ?? 0;
+  const omega6 = nutrients['1406'] ?? nutrients['853'] ?? 0;
+  const water = nutrients['1051'] ?? nutrients['255'] ?? 0;
 
   return {
     foodName: food.description || 'USDA Food',
@@ -83,32 +120,32 @@ function mapUSDAFoodToRecord(food: any): CreateFoodInput {
     fiber: Math.round(fiber * 10) / 10,
     sugar: Math.round(sugar * 10) / 10,
     vitaminA: Math.round(vitA * 10) / 10,
-    vitaminB1: 0,
-    vitaminB2: 0,
-    vitaminB3: 0,
-    vitaminB5: 0,
-    vitaminB6: 0,
-    vitaminB7: 0,
-    vitaminB9: 0,
-    vitaminB12: 0,
+    vitaminB1: Math.round(vitB1 * 10) / 10,
+    vitaminB2: Math.round(vitB2 * 10) / 10,
+    vitaminB3: Math.round(vitB3 * 10) / 10,
+    vitaminB5: Math.round(vitB5 * 10) / 10,
+    vitaminB6: Math.round(vitB6 * 10) / 10,
+    vitaminB7: Math.round(vitB7 * 10) / 10,
+    vitaminB9: Math.round(vitB9 * 10) / 10,
+    vitaminB12: Math.round(vitB12 * 10) / 10,
     vitaminC: Math.round(vitC * 10) / 10,
     vitaminD: Math.round(vitD * 10) / 10,
-    vitaminE: 0,
-    vitaminK: 0,
+    vitaminE: Math.round(vitE * 10) / 10,
+    vitaminK: Math.round(vitK * 10) / 10,
     calcium: Math.round(calcium * 10) / 10,
     iron: Math.round(iron * 10) / 10,
-    magnesium: 0,
+    magnesium: Math.round(magnesium * 10) / 10,
     potassium: Math.round(potassium * 10) / 10,
     sodium: Math.round(sodium * 10) / 10,
-    zinc: 0,
-    copper: 0,
-    selenium: 0,
-    manganese: 0,
-    phosphorus: 0,
+    zinc: Math.round(zinc * 10) / 10,
+    copper: Math.round(copper * 10) / 10,
+    selenium: Math.round(selenium * 10) / 10,
+    manganese: Math.round(manganese * 10) / 10,
+    phosphorus: Math.round(phosphorus * 10) / 10,
     cholesterol: Math.round(cholesterol * 10) / 10,
-    omega3: 0,
-    omega6: 0,
-    water: 0,
+    omega3: Math.round(omega3 * 10) / 10,
+    omega6: Math.round(omega6 * 10) / 10,
+    water: Math.round(water * 10) / 10,
     sourceReference: `USDA FDC ID: ${food.fdcId || 'N/A'} (Foundation/SR Legacy)`,
   };
 }

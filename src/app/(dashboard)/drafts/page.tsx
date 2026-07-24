@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { initializeDatabase } from '@/core/db/init-db';
 import { getAIDrafts } from '@/modules/drafts/services/draft-service';
-import { Sparkles, Clock, CheckCircle2, XCircle, ArrowRight, Cpu, ShieldCheck, Plus } from 'lucide-react';
+import { Sparkles, Clock, CheckCircle2, XCircle, ArrowRight } from 'lucide-react';
 
 export const revalidate = 0;
 
@@ -17,42 +17,24 @@ export default async function AIDraftsQueuePage({
 
   const statusBadges = {
     pending: { label: 'Pending Review', class: 'bg-amber-500/10 text-amber-400 border-amber-500/20', icon: Clock },
-    approved: { label: 'Approved & Committed', class: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20', icon: CheckCircle2 },
+    approved: { label: 'Approved', class: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20', icon: CheckCircle2 },
     rejected: { label: 'Rejected', class: 'bg-red-500/10 text-red-400 border-red-500/20', icon: XCircle },
   };
 
   return (
-    <div className="space-y-8 max-w-6xl">
+    <div className="space-y-6 w-full max-w-full animate-hud-reveal">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-neutral-800/80 pb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
-            <Sparkles className="w-6 h-6 text-amber-400" />
-            Admin AI Draft Review Queue
-          </h1>
-          <p className="text-neutral-400 text-sm mt-1">
-            Enforces the mandatory Human Approval Policy. AI never modifies production database tables directly.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <a
-            href="/api/drafts/seed"
-            className="px-3.5 py-2 rounded-xl amber-gradient-bg text-white font-medium text-xs shadow-md hover:opacity-90 transition-opacity flex items-center gap-1.5"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Generate Sample AI Draft</span>
-          </a>
-
-          <div className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl bg-neutral-900 border border-neutral-800 text-xs text-neutral-300">
-            <ShieldCheck className="w-4 h-4 text-emerald-400" />
-            <span>Staging: Active</span>
+      <div className="flex items-center justify-between border-b border-neutral-800/80 pb-4">
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-orange-500/10 text-orange-400 border border-orange-500/20">
+            <Sparkles className="w-5 h-5 text-amber-400" />
           </div>
-        </div>
+          <span>AI Staging Queue</span>
+        </h1>
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 font-mono">
         {[
           { label: 'Pending Approval', value: 'pending' },
           { label: 'Approved History', value: 'approved' },
@@ -63,10 +45,10 @@ export default async function AIDraftsQueuePage({
             <Link
               key={tab.value}
               href={`/drafts?status=${tab.value}`}
-              className={`px-4 py-2 rounded-xl text-xs font-semibold transition-colors ${
+              className={`px-3.5 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all ${
                 isActive
-                  ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                  : 'bg-neutral-900 border border-neutral-800 text-neutral-400 hover:text-neutral-200'
+                  ? 'glow-pill-amber font-bold text-orange-400 bg-orange-500/10 border border-orange-500/30'
+                  : 'bg-neutral-900/80 border border-neutral-800 text-zinc-400 hover:text-white hover:border-neutral-700'
               }`}
             >
               {tab.label}
@@ -77,21 +59,9 @@ export default async function AIDraftsQueuePage({
 
       {/* Draft List */}
       {drafts.length === 0 ? (
-        <div className="p-12 rounded-2xl glass-panel border border-neutral-800 text-center space-y-4">
-          <Sparkles className="w-12 h-12 text-neutral-600 mx-auto" />
-          <div>
-            <h3 className="text-base font-bold text-white">No {filterStatus} AI drafts in queue</h3>
-            <p className="text-xs text-neutral-400 mt-1 max-w-sm mx-auto">
-              Click the button below to generate a fresh sample pending AI draft for pre-commit testing!
-            </p>
-          </div>
-          <a
-            href="/api/drafts/seed"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl amber-gradient-bg text-white font-medium text-xs shadow-md"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Generate Sample Draft</span>
-          </a>
+        <div className="p-12 rounded-2xl elevation-level2 border border-neutral-800/90 text-center space-y-3 shadow-xl">
+          <Sparkles className="w-10 h-10 text-zinc-600 mx-auto" />
+          <h3 className="text-base font-bold text-white font-sans">Queue Empty ({filterStatus})</h3>
         </div>
       ) : (
         <div className="space-y-4">
@@ -103,15 +73,15 @@ export default async function AIDraftsQueuePage({
             return (
               <div
                 key={draft.id}
-                className="p-6 rounded-2xl glass-panel border border-neutral-800 hover:border-amber-500/40 transition-all flex flex-col md:flex-row items-start md:items-center justify-between gap-6"
+                className="p-5 rounded-2xl elevation-level2 border border-neutral-800/90 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-xl"
               >
-                <div className="space-y-2 max-w-2xl">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="px-2.5 py-0.5 rounded-full bg-orange-500/10 text-orange-400 border border-orange-500/20 text-[10px] font-bold uppercase tracking-wider">
+                <div className="space-y-2 max-w-3xl">
+                  <div className="flex items-center gap-2 flex-wrap font-mono">
+                    <span className="px-2 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 text-[10px] uppercase font-bold">
                       {draft.targetContentType.replace('_', ' ')}
                     </span>
 
-                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold border inline-flex items-center gap-1 ${statusInfo.class}`}>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold border inline-flex items-center gap-1 ${statusInfo.class}`}>
                       <StatusIcon className="w-3 h-3" />
                       <span>{statusInfo.label}</span>
                     </span>
@@ -121,31 +91,21 @@ export default async function AIDraftsQueuePage({
                     </span>
                   </div>
 
-                  <h3 className="text-lg font-bold text-white">
+                  <h3 className="text-base font-bold text-white font-sans">
                     {payload.title || 'Untitled Proposal'}
                   </h3>
 
-                  <p className="text-xs text-neutral-400 leading-relaxed">
-                    <strong className="text-neutral-300">AI Rationale:</strong> {draft.reason}
+                  <p className="text-xs text-zinc-400 leading-relaxed font-sans">
+                    <strong className="text-zinc-300 font-mono">AI Rationale:</strong> {draft.reason}
                   </p>
-
-                  <div className="flex items-center gap-4 text-[11px] text-neutral-500 pt-1">
-                    <span className="flex items-center gap-1">
-                      <Cpu className="w-3.5 h-3.5 text-amber-400" />
-                      {draft.provider} ({draft.model})
-                    </span>
-                    <span>Tokens: {draft.tokenUsage}</span>
-                    <span>Latency: {draft.latencyMs}ms</span>
-                    <span>Created: {new Date(draft.createdAt).toLocaleString()}</span>
-                  </div>
                 </div>
 
-                <div className="shrink-0 flex items-center gap-3 w-full md:w-auto justify-end border-t md:border-t-0 border-neutral-800/80 pt-4 md:pt-0">
+                <div className="shrink-0 flex items-center gap-3 w-full md:w-auto justify-end border-t md:border-t-0 border-neutral-800/80 pt-3 md:pt-0 font-mono">
                   <Link
                     href={`/drafts/${draft.id}`}
-                    className="px-4 py-2 rounded-xl amber-gradient-bg text-white font-medium text-xs shadow-md hover:opacity-90 transition-opacity flex items-center gap-1.5"
+                    className="px-4 py-2 rounded-xl amber-gradient-bg text-white text-xs font-bold shadow-md hover:scale-105 transition-all flex items-center gap-1.5 cursor-pointer"
                   >
-                    <span>Review Proposal</span>
+                    <span>Review</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </Link>
                 </div>

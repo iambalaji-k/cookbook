@@ -94,7 +94,23 @@ export async function createContentEntity(rawInput: CreateContentEntityInput) {
   // 6. Sync entity to FTS Index
   await syncEntityToFTS(entityId);
 
-  return getContentEntityById(entityId);
+  // 7. Record Initial Baseline Revision Snapshot (#1)
+  const snapshotData = await getContentEntityById(entityId);
+  if (snapshotData) {
+    await db.insert(revisions).values({
+      id: crypto.randomUUID(),
+      entityId,
+      entityType: validated.contentType,
+      revisionNumber: 1,
+      snapshotJSON: JSON.stringify(snapshotData),
+      changeSummary: 'Initial creation & publication',
+      approvedBy: 'system',
+      approvedAt: now,
+      createdAt: now,
+    });
+  }
+
+  return snapshotData;
 }
 
 /**
@@ -294,7 +310,7 @@ export async function getContentEntities(options?: {
   favoritesOnly?: boolean;
   limit?: number;
 }) {
-  let conditions = [];
+  const conditions = [];
 
   if (options?.contentType && options.contentType !== 'all' && options.contentType !== 'favorites') {
     conditions.push(eq(contentEntities.contentType, options.contentType as any));

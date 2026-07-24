@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Search, X, Sparkles, Utensils, ArrowRight, RefreshCw, BookOpen, Clock, Tag } from 'lucide-react';
+import { Search, X, Sparkles, Utensils, ArrowRight, RefreshCw, BookOpen, Clock } from 'lucide-react';
 
 interface SearchResultItem {
   id: string;
@@ -17,22 +17,39 @@ interface SearchResultItem {
   totalTimeMinutes?: number;
 }
 
+interface SearchInterpretation {
+  summary?: string;
+  keywords?: string[];
+  maxTotalTimeMinutes?: number;
+  cuisine?: string;
+}
+
 export function SearchInterface() {
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('all');
   const [isAIMode, setIsAIMode] = useState(true);
 
   const [results, setResults] = useState<SearchResultItem[]>([]);
-  const [interpretation, setInterpretation] = useState<any | null>(null);
+  const [interpretation, setInterpretation] = useState<SearchInterpretation | null>(null);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+
     if (!query.trim()) {
-      setResults([]);
-      setInterpretation(null);
-      setSearched(false);
-      return;
+      const resetTimer = setTimeout(() => {
+        if (!cancelled) {
+          setResults([]);
+          setInterpretation(null);
+          setSearched(false);
+          setLoading(false);
+        }
+      }, 0);
+      return () => {
+        cancelled = true;
+        clearTimeout(resetTimer);
+      };
     }
 
     const timer = setTimeout(async () => {
@@ -45,27 +62,32 @@ export function SearchInterface() {
             body: JSON.stringify({ query }),
           });
           const json = await res.json();
-          if (json.status === 'ok' && json.data) {
+          if (!cancelled && json.status === 'ok' && json.data) {
             setResults(json.data.results || []);
             setInterpretation(json.data.interpretation || null);
           }
         } else {
-          setInterpretation(null);
           const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&type=${category}`);
           const json = await res.json();
-          if (json.status === 'ok') {
+          if (!cancelled && json.status === 'ok') {
+            setInterpretation(null);
             setResults(json.data || []);
           }
         }
       } catch (err) {
         console.error('Search query failed:', err);
       } finally {
-        setLoading(false);
-        setSearched(true);
+        if (!cancelled) {
+          setLoading(false);
+          setSearched(true);
+        }
       }
     }, 350);
 
-    return () => clearTimeout(timer);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [query, category, isAIMode]);
 
   const categories = [
@@ -79,7 +101,7 @@ export function SearchInterface() {
   ];
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 w-full max-w-full">
       {/* Search Mode Toggle Header */}
       <div className="flex items-center justify-between glass-panel p-2 rounded-xl border border-neutral-800">
         <div className="flex items-center gap-2">
@@ -182,7 +204,7 @@ export function SearchInterface() {
           <p className="text-neutral-300">{interpretation.summary}</p>
 
           <div className="flex flex-wrap items-center gap-2 pt-1">
-            {interpretation.keywords.map((kw: string, i: number) => (
+            {interpretation.keywords?.map((kw: string, i: number) => (
               <span key={i} className="px-2 py-0.5 rounded bg-neutral-900 border border-neutral-800 text-neutral-200 text-[10px] font-mono">
                 Keyword: {kw}
               </span>
@@ -225,7 +247,7 @@ export function SearchInterface() {
               <BookOpen className="w-10 h-10 text-neutral-600 mx-auto" />
               <h3 className="text-base font-bold text-white">No matching culinary content found</h3>
               <p className="text-xs text-neutral-400 max-w-sm mx-auto">
-                Try asking a conversational question like "Quick Italian recipe with garlic" or search for "shrimp".
+                Try asking a conversational question like &quot;Quick Italian recipe with garlic&quot; or search for &quot;shrimp&quot;.
               </p>
             </div>
           ) : (

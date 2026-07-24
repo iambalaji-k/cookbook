@@ -11,10 +11,11 @@ import {
   RotateCw, 
   CheckCircle2, 
   Info,
-  Globe
+  Globe,
+  Sparkles
 } from 'lucide-react';
 import { RecipeNutritionCalculationResult } from '../types/nutrition.types';
-import { DVProfile, DAILY_VALUE_PROFILES } from '../utils/daily-values';
+import { DVProfile } from '../utils/daily-values';
 import { ManualFoodModal } from './ManualFoodModal';
 
 interface RecipeNutritionCardProps {
@@ -22,7 +23,7 @@ interface RecipeNutritionCardProps {
   servings?: number;
 }
 
-export function RecipeNutritionCard({ recipeId, servings = 4 }: RecipeNutritionCardProps) {
+export function RecipeNutritionCard({ recipeId }: RecipeNutritionCardProps) {
   const [nutrition, setNutrition] = useState<RecipeNutritionCalculationResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -32,6 +33,29 @@ export function RecipeNutritionCard({ recipeId, servings = 4 }: RecipeNutritionC
   const [dvProfile, setDvProfile] = useState<DVProfile>('US_FDA');
   const [showMicros, setShowMicros] = useState(false);
   const [manualModalIngredient, setManualModalIngredient] = useState<string | null>(null);
+  const [autoFilling, setAutoFilling] = useState(false);
+  const [autoFillResults, setAutoFillResults] = useState<Record<string, string> | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadData() {
+      setLoading(true);
+      try {
+        const res = await fetch(`/api/nutrition/recipes/${recipeId}?recalculate=false&dvProfile=${dvProfile}`);
+        const json = await res.json();
+        if (!res.ok || !json.success) {
+          throw new Error(json.error || 'Failed to load nutrition data');
+        }
+        if (!cancelled) setNutrition(json.data);
+      } catch (err: unknown) {
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Error loading nutrition data');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    loadData();
+    return () => { cancelled = true; };
+  }, [recipeId, dvProfile]);
 
   const fetchNutrition = async (recalculate = false) => {
     setLoading(true);
@@ -42,16 +66,39 @@ export function RecipeNutritionCard({ recipeId, servings = 4 }: RecipeNutritionC
         throw new Error(json.error || 'Failed to load nutrition data');
       }
       setNutrition(json.data);
-    } catch (err: any) {
-      setError(err.message || 'Error loading nutrition data');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Error loading nutrition data');
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchNutrition();
-  }, [recipeId, dvProfile]);
+  const handleAutoFillAll = async () => {
+    if (!nutrition || nutrition.unmappedIngredients.length === 0) return;
+    setAutoFilling(true);
+    setAutoFillResults(null);
+
+    try {
+      const res = await fetch(`/api/nutrition/recipes/${recipeId}/auto-fill-unmapped`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ingredients: nutrition.unmappedIngredients }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Auto-fill failed');
+
+      const resultMap: Record<string, string> = {};
+      for (const r of json.results) {
+        resultMap[r.ingredient] = r.status === 'mapped' ? '✅' : '❌';
+      }
+      setAutoFillResults(resultMap);
+      setNutrition(json.nutrition);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Auto-fill failed');
+    } finally {
+      setAutoFilling(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -107,9 +154,6 @@ export function RecipeNutritionCard({ recipeId, servings = 4 }: RecipeNutritionC
                 {nutrition.nutritionCoveragePercent}% Mapped
               </span>
             </h3>
-            <p className="text-xs text-neutral-400">
-              Deterministic calculations based on master food database.
-            </p>
           </div>
         </div>
 
@@ -172,7 +216,7 @@ export function RecipeNutritionCard({ recipeId, servings = 4 }: RecipeNutritionC
 
       {/* Unmapped Warnings & Manual Entry Callout */}
       {!isFullCoverage && nutrition.unmappedIngredients.length > 0 && (
-        <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs space-y-2">
+        <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs space-y-3">
           <div className="flex items-center justify-between">
             <span className="font-semibold flex items-center gap-1.5">
               <AlertTriangle className="w-4 h-4 text-amber-400" />
@@ -188,9 +232,27 @@ export function RecipeNutritionCard({ recipeId, servings = 4 }: RecipeNutritionC
                 className="px-2.5 py-1 rounded-lg bg-neutral-900/80 hover:bg-neutral-800 border border-amber-500/30 text-amber-200 text-[11px] flex items-center gap-1 transition"
               >
                 <span>{item}</span>
-                <PlusCircle className="w-3 h-3 text-amber-400" />
+                {autoFillResults?.[item] ? (
+                  <span className="text-emerald-400">{autoFillResults[item]}</span>
+                ) : (
+                  <PlusCircle className="w-3 h-3 text-amber-400" />
+                )}
               </button>
             ))}
+          </div>
+          <div className="pt-1">
+            <button
+              onClick={handleAutoFillAll}
+              disabled={autoFilling}
+              className="px-3 py-1.5 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-300 text-[11px] font-semibold hover:bg-amber-500/30 transition flex items-center gap-1.5 disabled:opacity-50"
+            >
+              {autoFilling ? (
+                <RotateCw className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Sparkles className="w-3.5 h-3.5" />
+              )}
+              <span>{autoFilling ? 'Auto-Filling...' : `Auto-Fill All ${nutrition.unmappedIngredients.length} Unmapped`}</span>
+            </button>
           </div>
         </div>
       )}

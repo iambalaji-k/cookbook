@@ -88,7 +88,7 @@ export async function approveAIDraft(id: string, editedData?: any) {
     throw new Error(`Draft ${id} is already ${draft.status}.`);
   }
 
-  const payloadToCommit = editedData || draft.proposedData;
+  const payloadToCommit = (editedData && typeof editedData === 'object' && !Array.isArray(editedData)) ? editedData : draft.proposedData;
   const now = new Date().toISOString();
   let committedEntity = null;
 

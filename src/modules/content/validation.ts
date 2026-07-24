@@ -49,7 +49,7 @@ export const createContentEntitySchema = z.object({
   id: z.string().optional(),
   contentType: contentTypeEnum,
   title: z.string().min(1, 'Title is required'),
-  slug: z.string().min(1, 'Slug is required'),
+  slug: z.string().optional(),
   summary: z.string().nullable().optional(),
   status: z.enum(['draft', 'published', 'archived']).default('published'),
   servings: z.number().min(1).default(4),

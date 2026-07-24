@@ -1,6 +1,6 @@
 import { initializeDatabase } from '@/core/db/init-db';
 import { SearchInterface } from '@/modules/search/components/SearchInterface';
-import { Search as SearchIcon, Zap } from 'lucide-react';
+import { Search as SearchIcon } from 'lucide-react';
 
 export const revalidate = 0;
 
@@ -8,17 +8,15 @@ export default async function SearchPage() {
   await initializeDatabase();
 
   return (
-    <div className="space-y-8 max-w-4xl">
+    <div className="space-y-6 w-full max-w-full animate-hud-reveal">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
-          <SearchIcon className="w-6 h-6 text-orange-400" />
-          Multi-Field Full-Text Search (FTS5)
+      <div className="flex items-center justify-between border-b border-neutral-800/80 pb-4">
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-orange-500/10 text-orange-400 border border-orange-500/20">
+            <SearchIcon className="w-5 h-5" />
+          </div>
+          <span>Search</span>
         </h1>
-        <p className="text-neutral-400 text-sm mt-1 flex items-center gap-1.5">
-          <Zap className="w-4 h-4 text-amber-400" />
-          Instant search across titles, ingredients, instructions, tags, summaries, and cuisines with BM25 ranking.
-        </p>
       </div>
 
       <SearchInterface />

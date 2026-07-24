@@ -7,9 +7,10 @@ export async function GET(request: Request) {
     await initializeDatabase();
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type') || undefined;
-    const search = searchParams.get('search') || undefined;
+    const search = searchParams.get('search') || searchParams.get('q') || undefined;
+    const favoritesOnly = searchParams.get('favoritesOnly') === 'true' || searchParams.get('favorites') === 'true' || type === 'favorites';
 
-    const entities = await getContentEntities({ contentType: type, query: search });
+    const entities = await getContentEntities({ contentType: type, query: search, favoritesOnly });
     return NextResponse.json({ status: 'ok', data: entities });
   } catch (error) {
     return NextResponse.json(
