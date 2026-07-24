@@ -1,10 +1,9 @@
 import { initializeDatabase } from '@/core/db/init-db';
 import { db } from '@/core/db';
 import { contentEntities, aiDrafts } from '@/core/db/schema';
-import { count, desc } from 'drizzle-orm';
+import { count, desc, eq, gte } from 'drizzle-orm';
 import { 
   Sparkles, 
-  FileText, 
   BookOpen, 
   Plus,
   Activity,
@@ -25,6 +24,7 @@ export default async function DashboardPage() {
   
   let stats = {
     contentCount: 0,
+    weeklyContentCount: 0,
     draftsCount: 0,
   };
 
@@ -33,12 +33,23 @@ export default async function DashboardPage() {
 
   if (dbStatus.success) {
     try {
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
       const [cCount] = await db.select({ value: count() }).from(contentEntities);
-      const [dCount] = await db.select({ value: count() }).from(aiDrafts);
+      const [weeklyCount] = await db
+        .select({ value: count() })
+        .from(contentEntities)
+        .where(gte(contentEntities.createdAt, sevenDaysAgo));
+
+      const [pendingDraftsCount] = await db
+        .select({ value: count() })
+        .from(aiDrafts)
+        .where(eq(aiDrafts.status, 'pending'));
 
       stats = {
         contentCount: cCount?.value || 0,
-        draftsCount: dCount?.value || 0,
+        weeklyContentCount: weeklyCount?.value || 0,
+        draftsCount: pendingDraftsCount?.value || 0,
       };
 
       recentContent = await db
@@ -50,6 +61,7 @@ export default async function DashboardPage() {
       recentDrafts = await db
         .select()
         .from(aiDrafts)
+        .where(eq(aiDrafts.status, 'pending'))
         .orderBy(desc(aiDrafts.createdAt))
         .limit(3);
     } catch (e) {
@@ -59,7 +71,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6 animate-hud-reveal">
-      {/* Clean 2-Column Hero Metric Cards Grid (Recipes & Drafts Only) */}
+      {/* Clean 2-Column Hero Metric Cards Grid (Recipes & Pending Drafts Only) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Metric 1: Recipes */}
         <Link 
@@ -79,7 +91,7 @@ export default async function DashboardPage() {
               {stats.contentCount}
             </p>
             <div className="flex items-center justify-between text-xs text-zinc-400 mt-1 font-sans">
-              <span className="text-orange-400 font-semibold">+3 this week</span>
+              <span className="text-orange-400 font-semibold">+{stats.weeklyContentCount} this week</span>
               <ArrowUpRight className="w-4 h-4 text-orange-400 opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
           </div>
@@ -246,7 +258,7 @@ export default async function DashboardPage() {
           )}
         </div>
 
-        {/* Right Column: AI Staging Stream */}
+        {/* Right Column: AI Staging Stream (Pending Drafts Only) */}
         <div className="p-5 sm:p-6 rounded-2xl elevation-level2 border border-neutral-700/70 space-y-4 shadow-xl">
           <div className="flex items-center justify-between border-b border-neutral-800/90 pb-3">
             <h3 className="font-hud text-sm font-bold text-white tracking-wide flex items-center gap-2">
@@ -266,13 +278,6 @@ export default async function DashboardPage() {
             <div className="py-8 text-center space-y-3">
               <Sparkles className="w-8 h-8 text-zinc-600 mx-auto" />
               <p className="text-xs font-sans text-zinc-300">No pending AI drafts in staging.</p>
-              <Link
-                href="/api/drafts/seed"
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/30 font-mono text-xs font-semibold"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Generate Draft</span>
-              </Link>
             </div>
           ) : (
             <div className="space-y-2.5">
