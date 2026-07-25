@@ -3,6 +3,7 @@ import { Orbitron, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { Header } from '@/components/layout/Header';
 import { Sidebar } from '@/components/layout/Sidebar';
+import { MobileNav } from '@/components/layout/MobileNav';
 
 const orbitron = Orbitron({
   subsets: ['latin'],
@@ -54,14 +55,17 @@ export default function RootLayout({
         <Header />
 
         <div className="flex flex-1 w-full z-10">
-          {/* Navigation Sidebar */}
+          {/* Navigation Sidebar (Desktop) */}
           <Sidebar />
 
           {/* Main Content Area */}
-          <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto w-full max-w-7xl 2xl:max-w-[1700px] mx-auto">
+          <main className="flex-1 p-4 sm:p-6 md:p-8 pb-20 md:pb-8 overflow-y-auto w-full max-w-7xl 2xl:max-w-[1700px] mx-auto">
             {children}
           </main>
         </div>
+
+        {/* Mobile Navigation Drawer & Bottom Bar */}
+        <MobileNav />
       </body>
     </html>
   );

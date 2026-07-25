@@ -134,14 +134,14 @@ export function Header() {
                   window.dispatchEvent(event);
                 }}
                 title="Open Command Palette (Ctrl+K)"
-                className="absolute right-2 px-1.5 py-0.5 text-[10px] font-mono rounded bg-neutral-800 hover:bg-neutral-700 text-zinc-400 hover:text-white border border-neutral-700 shadow-sm flex items-center gap-1 cursor-pointer transition-colors"
+                className="absolute right-2 px-1.5 py-0.5 text-[10px] font-mono rounded bg-neutral-800 hover:bg-neutral-700 text-zinc-400 hover:text-white border border-neutral-700 shadow-sm hidden sm:flex items-center gap-1 cursor-pointer transition-colors"
               >
                 <Command className="w-3 h-3 text-orange-400" /> K
               </button>
             </div>
 
             {/* Search Nature Dropdown Selector (Evaluated on Enter / Submit) */}
-            <div className="relative shrink-0 flex items-center gap-1 bg-neutral-900 border border-neutral-800 rounded-xl px-2 py-1">
+            <div className="relative shrink-0 hidden md:flex items-center gap-1 bg-neutral-900 border border-neutral-800 rounded-xl px-2 py-1">
               <SlidersHorizontal className="w-3.5 h-3.5 text-orange-400" />
               <select
                 value={searchMode}
@@ -222,10 +222,10 @@ export function Header() {
         {/* Far Right: Persistent New Recipe Button */}
         <Link
           href="/content/new"
-          className="cta-glow-pulse px-4 py-2 rounded-xl text-white font-sans text-xs sm:text-sm font-bold shadow-lg transition-all flex items-center gap-2 shrink-0 group focus:ring-2 focus:ring-orange-500 outline-none hover:scale-105"
+          className="cta-glow-pulse px-3 sm:px-4 py-2 rounded-xl text-white font-sans text-xs sm:text-sm font-bold shadow-lg transition-all flex items-center gap-2 shrink-0 group focus:ring-2 focus:ring-orange-500 outline-none hover:scale-105"
         >
           <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform duration-300" />
-          <span>New Recipe</span>
+          <span className="hidden sm:inline">New Recipe</span>
         </Link>
 
         {/* Global Command Palette Modal (Ctrl+K / ⌘K) */}
