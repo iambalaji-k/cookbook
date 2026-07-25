@@ -10,7 +10,7 @@ import {
   Server
 } from 'lucide-react';
 
-export const revalidate = 0;
+export const revalidate = 60;
 
 export default async function SettingsPage() {
   const dbStatus = await initializeDatabase();

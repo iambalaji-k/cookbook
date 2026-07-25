@@ -9,7 +9,7 @@ import {
 } from '@/core/db/schema';
 import { createContentEntitySchema, type CreateContentEntityInput, type UpdateContentEntityInput } from '../validation';
 import { generateSlug } from '../utils/slug';
-import { eq, desc, like, or, and } from 'drizzle-orm';
+import { eq, desc, like, or, and, inArray } from 'drizzle-orm';
 import { syncEntityToFTS } from '@/core/db/init-db';
 
 /**
@@ -261,33 +261,13 @@ export async function getContentEntityById(idOrSlug: string) {
 
   if (!entity) return null;
 
-  const entityIngredients = await db
-    .select()
-    .from(ingredients)
-    .where(eq(ingredients.entityId, entity.id))
-    .orderBy(ingredients.sortOrder);
-
-  const entityInstructions = await db
-    .select()
-    .from(instructions)
-    .where(eq(instructions.entityId, entity.id))
-    .orderBy(instructions.stepNumber);
-
-  const entityImages = await db
-    .select()
-    .from(images)
-    .where(eq(images.entityId, entity.id));
-
-  const entityTags = await db
-    .select()
-    .from(tags)
-    .where(eq(tags.entityId, entity.id));
-
-  const entityRevisions = await db
-    .select()
-    .from(revisions)
-    .where(eq(revisions.entityId, entity.id))
-    .orderBy(desc(revisions.revisionNumber));
+  const [entityIngredients, entityInstructions, entityImages, entityTags, entityRevisions] = await Promise.all([
+    db.select().from(ingredients).where(eq(ingredients.entityId, entity.id)).orderBy(ingredients.sortOrder),
+    db.select().from(instructions).where(eq(instructions.entityId, entity.id)).orderBy(instructions.stepNumber),
+    db.select().from(images).where(eq(images.entityId, entity.id)),
+    db.select().from(tags).where(eq(tags.entityId, entity.id)),
+    db.select().from(revisions).where(eq(revisions.entityId, entity.id)).orderBy(desc(revisions.revisionNumber)),
+  ]);
 
   return {
     ...entity,
@@ -308,9 +288,12 @@ export async function getContentEntities(options?: {
   contentType?: string;
   query?: string;
   favoritesOnly?: boolean;
+  page?: number;
   limit?: number;
 }) {
   const conditions = [];
+  const page = options?.page || 1;
+  const pageSize = options?.limit || 50;
 
   if (options?.contentType && options.contentType !== 'all' && options.contentType !== 'favorites') {
     conditions.push(eq(contentEntities.contentType, options.contentType as any));
@@ -336,7 +319,7 @@ export async function getContentEntities(options?: {
     ? baseQuery.where(and(...conditions)).orderBy(desc(contentEntities.createdAt))
     : baseQuery.orderBy(desc(contentEntities.createdAt));
 
-  return await finalQuery;
+  return await finalQuery.limit(pageSize).offset((page - 1) * pageSize);
 }
 
 /**

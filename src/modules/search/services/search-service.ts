@@ -1,6 +1,6 @@
 import { db } from '@/core/db';
-import { sql } from 'drizzle-orm';
-import { getContentEntityById } from '@/modules/content/services/content-service';
+import { contentEntities } from '@/core/db/schema';
+import { sql, inArray } from 'drizzle-orm';
 
 export interface SearchResultItem {
   id: string;
@@ -84,10 +84,21 @@ export async function searchContentFTS(
     `);
 
     const rawRows = (ftsResults.rows || []) as unknown as FTSRow[];
+
+    if (rawRows.length === 0) return [];
+
+    // Batch-fetch entities in a single query instead of N+1
+    const entityIds = rawRows.map((r) => r.entity_id);
+    const entities = await db
+      .select()
+      .from(contentEntities)
+      .where(inArray(contentEntities.id, entityIds));
+    const entityMap = new Map(entities.map((e) => [e.id, e]));
+
     const results: SearchResultItem[] = [];
 
     for (const row of rawRows) {
-      const entity = await getContentEntityById(row.entity_id);
+      const entity = entityMap.get(row.entity_id);
       if (!entity) continue;
 
       if (contentType && contentType !== 'all' && entity.contentType !== contentType) {

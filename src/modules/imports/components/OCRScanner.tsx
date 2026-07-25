@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { createWorker } from 'tesseract.js';
 import { Camera, Upload, RefreshCw, CheckCircle2, AlertCircle, FileText } from 'lucide-react';
 
 interface OCRScannerProps {
@@ -33,6 +32,7 @@ export function OCRScanner({ onScanComplete }: OCRScannerProps) {
     setStatusMessage('Initializing Tesseract OCR worker...');
 
     try {
+      const { createWorker } = await import('tesseract.js');
       const worker = await createWorker('eng', 1, {
         logger: (m) => {
           if (m.status === 'recognizing text') {

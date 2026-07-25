@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 
-export const revalidate = 0;
+export const revalidate = 60;
 
 export default async function DashboardPage() {
   const dbStatus = await initializeDatabase();
@@ -35,16 +35,13 @@ export default async function DashboardPage() {
     try {
       const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
-      const [cCount] = await db.select({ value: count() }).from(contentEntities);
-      const [weeklyCount] = await db
-        .select({ value: count() })
-        .from(contentEntities)
-        .where(gte(contentEntities.createdAt, sevenDaysAgo));
-
-      const [pendingDraftsCount] = await db
-        .select({ value: count() })
-        .from(aiDrafts)
-        .where(eq(aiDrafts.status, 'pending'));
+      const [[cCount], [weeklyCount], [pendingDraftsCount], recentContentData, recentDraftsData] = await Promise.all([
+        db.select({ value: count() }).from(contentEntities),
+        db.select({ value: count() }).from(contentEntities).where(gte(contentEntities.createdAt, sevenDaysAgo)),
+        db.select({ value: count() }).from(aiDrafts).where(eq(aiDrafts.status, 'pending')),
+        db.select().from(contentEntities).orderBy(desc(contentEntities.createdAt)).limit(4),
+        db.select().from(aiDrafts).where(eq(aiDrafts.status, 'pending')).orderBy(desc(aiDrafts.createdAt)).limit(3),
+      ]);
 
       stats = {
         contentCount: cCount?.value || 0,
@@ -52,22 +49,13 @@ export default async function DashboardPage() {
         draftsCount: pendingDraftsCount?.value || 0,
       };
 
-      recentContent = await db
-        .select()
-        .from(contentEntities)
-        .orderBy(desc(contentEntities.createdAt))
-        .limit(4);
-
-      recentDrafts = await db
-        .select()
-        .from(aiDrafts)
-        .where(eq(aiDrafts.status, 'pending'))
-        .orderBy(desc(aiDrafts.createdAt))
-        .limit(3);
+      recentContent = recentContentData;
+      recentDrafts = recentDraftsData;
     } catch (e) {
       console.error(e);
     }
   }
+
 
   return (
     <div className="space-y-6 animate-hud-reveal">

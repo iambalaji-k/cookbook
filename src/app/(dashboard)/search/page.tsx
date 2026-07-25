@@ -2,7 +2,7 @@ import { initializeDatabase } from '@/core/db/init-db';
 import { SearchInterface } from '@/modules/search/components/SearchInterface';
 import { Search as SearchIcon } from 'lucide-react';
 
-export const revalidate = 0;
+export const revalidate = 10;
 
 export default async function SearchPage() {
   await initializeDatabase();

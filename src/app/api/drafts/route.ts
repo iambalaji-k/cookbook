@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { initializeDatabase } from '@/core/db/init-db';
 import { getAIDrafts, createAIDraft } from '@/modules/drafts/services/draft-service';
+import { cacheHeaders } from '@/lib/cache';
 
 export async function GET(request: Request) {
   try {
@@ -9,7 +10,7 @@ export async function GET(request: Request) {
     const status = searchParams.get('status') as 'pending' | 'approved' | 'rejected' | null;
 
     const drafts = await getAIDrafts(status || undefined);
-    return NextResponse.json({ status: 'ok', data: drafts });
+    return NextResponse.json({ status: 'ok', data: drafts }, { headers: cacheHeaders(30, 120) });
   } catch (error) {
     return NextResponse.json(
       { status: 'error', message: String(error) },

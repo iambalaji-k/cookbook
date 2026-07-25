@@ -5,7 +5,7 @@ import { getAIDraftById } from '@/modules/drafts/services/draft-service';
 import { EditableProposalReview } from '@/modules/drafts/components/EditableProposalReview';
 import { Sparkles, ArrowLeft, Cpu, FileText, ShieldCheck, Clock, CheckCircle2, XCircle } from 'lucide-react';
 
-export const revalidate = 0;
+export const revalidate = 30;
 
 export default async function ReviewAIDraftPage({
   params,

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { initializeDatabase } from '@/core/db/init-db';
 import { getContentEntities, createContentEntity } from '@/modules/content/services/content-service';
+import { cacheHeaders } from '@/lib/cache';
 
 export async function GET(request: Request) {
   try {
@@ -11,7 +12,7 @@ export async function GET(request: Request) {
     const favoritesOnly = searchParams.get('favoritesOnly') === 'true' || searchParams.get('favorites') === 'true' || type === 'favorites';
 
     const entities = await getContentEntities({ contentType: type, query: search, favoritesOnly });
-    return NextResponse.json({ status: 'ok', data: entities });
+    return NextResponse.json({ status: 'ok', data: entities }, { headers: cacheHeaders(30, 120) });
   } catch (error) {
     return NextResponse.json(
       { status: 'error', message: String(error) },

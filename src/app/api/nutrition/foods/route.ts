@@ -3,6 +3,7 @@ import { initializeDatabase } from '@/core/db/init-db';
 import { searchNutritionFoods, createCustomFoodAndMap } from '@/modules/nutrition/services/nutrition-service';
 import { calculateAndCacheRecipeNutrition } from '@/modules/nutrition/services/calculator-service';
 import { manualEntrySchema } from '@/modules/nutrition/validation/nutrition-schema';
+import { cacheHeaders } from '@/lib/cache';
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,7 +12,7 @@ export async function GET(request: NextRequest) {
     const query = searchParams.get('q') || '';
 
     const foods = await searchNutritionFoods(query);
-    return NextResponse.json({ success: true, data: foods });
+    return NextResponse.json({ success: true, data: foods }, { headers: cacheHeaders(60, 300) });
   } catch (error: any) {
     return NextResponse.json({ error: error.message || 'Server error' }, { status: 500 });
   }

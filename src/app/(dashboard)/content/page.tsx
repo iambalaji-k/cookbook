@@ -2,19 +2,21 @@ import Link from 'next/link';
 import { initializeDatabase } from '@/core/db/init-db';
 import { getContentEntities } from '@/modules/content/services/content-service';
 import { ContentCard } from '@/modules/content/components/ContentCard';
-import { BookOpen } from 'lucide-react';
+import { BookOpen, ChevronLeft, ChevronRight } from 'lucide-react';
 
-export const revalidate = 0;
+export const revalidate = 30;
 
 export default async function ContentListPage({
   searchParams,
 }: {
-  searchParams: Promise<{ type?: string; search?: string; q?: string }>;
+  searchParams: Promise<{ type?: string; search?: string; q?: string; page?: string }>;
 }) {
   await initializeDatabase();
-  const { type, search, q } = await searchParams;
+  const { type, search, q, page } = await searchParams;
   const queryParam = q || search;
-  const items = await getContentEntities({ contentType: type, query: queryParam });
+  const currentPage = parseInt(page || '1', 10);
+  const pageSize = 24;
+  const items = await getContentEntities({ contentType: type, query: queryParam, page: currentPage, limit: pageSize });
 
   const filterTabs = [
     { label: 'All', value: undefined },
@@ -77,6 +79,29 @@ export default async function ContentListPage({
           {items.map((item) => (
             <ContentCard key={item.id} entity={item as any} />
           ))}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {items.length > 0 && (
+        <div className="flex items-center justify-center gap-3 pt-4 pb-2">
+          {currentPage > 1 && (
+            <Link
+              href={`/content${type ? `?type=${type}` : ''}${currentPage > 2 ? `&page=${currentPage - 1}` : ''}`}
+              className="px-3 py-1.5 rounded-lg bg-neutral-900 border border-neutral-800 text-xs text-zinc-300 hover:text-white hover:bg-neutral-800 transition-colors flex items-center gap-1"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+              Prev
+            </Link>
+          )}
+          <span className="text-xs font-mono text-zinc-500">Page {currentPage}</span>
+          <Link
+            href={`/content${type ? `?type=${type}&` : '?'}page=${currentPage + 1}`}
+            className="px-3 py-1.5 rounded-lg bg-neutral-900 border border-neutral-800 text-xs text-zinc-300 hover:text-white hover:bg-neutral-800 transition-colors flex items-center gap-1"
+          >
+            Next
+            <ChevronRight className="w-3.5 h-3.5" />
+          </Link>
         </div>
       )}
     </div>

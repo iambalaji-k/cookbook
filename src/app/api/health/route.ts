@@ -16,12 +16,14 @@ export async function GET() {
   try {
     const dbStatus = await initializeDatabase();
 
-    const [cCount] = await db.select({ value: count() }).from(contentEntities);
-    const [rCount] = await db.select({ value: count() }).from(revisions);
-    const [iCount] = await db.select({ value: count() }).from(rawImports);
-    const [dCount] = await db.select({ value: count() }).from(aiDrafts);
+    const [[cCount], [rCount], [iCount], [dCount], aiConfig] = await Promise.all([
+      db.select({ value: count() }).from(contentEntities),
+      db.select({ value: count() }).from(revisions),
+      db.select({ value: count() }).from(rawImports),
+      db.select({ value: count() }).from(aiDrafts),
+      db.query.aiProviderSettings.findFirst(),
+    ]);
 
-    const aiConfig = await db.query.aiProviderSettings.findFirst();
 
     const latencyMs = Date.now() - startTime;
 

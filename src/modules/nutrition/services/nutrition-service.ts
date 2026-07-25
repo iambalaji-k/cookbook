@@ -20,30 +20,41 @@ export async function findApprovedFoodMapping(ingredientName: string): Promise<N
   try {
     const rawClean = normalizeIngredientName(ingredientName);
 
-    // 1. Direct check in canonical_ingredient_nutrition_map
-    let mapRows = await db
-      .select()
+    // Single query: try direct match + synonym resolution + food_name/alias LIKE in one go
+    const mapRows = await db
+      .select({
+        id: canonicalIngredientNutritionMap.id,
+        normalizedIngredientName: canonicalIngredientNutritionMap.normalizedIngredientName,
+        nutritionFoodId: canonicalIngredientNutritionMap.nutritionFoodId,
+        mappingMethod: canonicalIngredientNutritionMap.mappingMethod,
+        approvedBy: canonicalIngredientNutritionMap.approvedBy,
+      })
       .from(canonicalIngredientNutritionMap)
-      .where(sql`normalized_ingredient_name = ${rawClean} AND approved_by IS NOT NULL`);
+      .where(sql`
+        approved_by IS NOT NULL
+        AND (
+          normalized_ingredient_name = ${rawClean}
+          OR normalized_ingredient_name IN (
+            SELECT canonical_name FROM ingredient_synonyms WHERE variant_name = ${rawClean}
+          )
+          OR id IN (
+            SELECT id FROM canonical_ingredient_nutrition_map
+            WHERE nutrition_food_id IN (
+              SELECT id FROM nutrition_foods
+              WHERE LOWER(food_name) LIKE ${`%${rawClean}%`}
+                 OR LOWER(aliases) LIKE ${`%${rawClean}%`}
+            )
+          )
+        )
+      `)
+      .limit(1);
 
-    // 2. If no direct match, check ingredient_synonyms
-    if (mapRows.length === 0) {
-      const synRows = await db
-        .select()
-        .from(ingredientSynonyms)
-        .where(sql`variant_name = ${rawClean}`);
+    let targetFoodId: string | null = null;
 
-      if (synRows.length > 0) {
-        const canonicalName = synRows[0].canonicalName;
-        mapRows = await db
-          .select()
-          .from(canonicalIngredientNutritionMap)
-          .where(sql`normalized_ingredient_name = ${canonicalName} AND approved_by IS NOT NULL`);
-      }
-    }
-
-    // 3. Partial substring matching if exact match failed
-    if (mapRows.length === 0) {
+    if (mapRows.length > 0) {
+      targetFoodId = mapRows[0].nutritionFoodId;
+    } else {
+      // Last resort: partial substring match against all approved maps
       const allApprovedMaps = await db
         .select()
         .from(canonicalIngredientNutritionMap)
@@ -51,45 +62,116 @@ export async function findApprovedFoodMapping(ingredientName: string): Promise<N
 
       for (const entry of allApprovedMaps) {
         if (rawClean.includes(entry.normalizedIngredientName) || entry.normalizedIngredientName.includes(rawClean)) {
-          mapRows = [entry];
+          targetFoodId = entry.nutritionFoodId;
           break;
         }
       }
     }
 
-    // 4. Direct search in nutrition_foods by foodName or aliases fallback
-    if (mapRows.length === 0) {
-      const searchClean = `%${rawClean}%`;
-      const directFoods = await db
-        .select()
-        .from(nutritionFoods)
-        .where(sql`LOWER(food_name) LIKE ${searchClean} OR LOWER(aliases) LIKE ${searchClean}`)
-        .limit(1);
+    if (!targetFoodId) return null;
 
-      if (directFoods.length > 0) {
-        return parseFoodRow(directFoods[0]);
-      }
-    }
-
-    if (mapRows.length === 0) {
-      return null;
-    }
-
-    const targetFoodId = mapRows[0].nutritionFoodId;
-    const foodRows = await db
+    const [foodRow] = await db
       .select()
       .from(nutritionFoods)
-      .where(sql`id = ${targetFoodId}`);
+      .where(sql`id = ${targetFoodId}`)
+      .limit(1);
 
-    if (foodRows.length === 0) return null;
-
-    const row = foodRows[0];
-    return parseFoodRow(row);
+    if (!foodRow) return null;
+    return parseFoodRow(foodRow);
   } catch (error) {
     console.error('Error finding approved food mapping:', error);
     return null;
   }
 }
+
+/**
+ * BATCH METHOD: Resolves multiple ingredient strings to mapped canonical food items in 2 queries total.
+ * Drastically reduces database round-trips from N*2 queries down to 2 queries total.
+ */
+export async function batchFindApprovedFoodMappings(
+  ingredientNames: string[]
+): Promise<Map<string, NutritionFoodRecord>> {
+  const result = new Map<string, NutritionFoodRecord>();
+  if (ingredientNames.length === 0) return result;
+
+  try {
+    // 1. Fetch ALL approved canonical maps and ALL synonyms in 2 quick parallel reads
+    const [approvedMaps, synonymsList] = await Promise.all([
+      db.select().from(canonicalIngredientNutritionMap).where(sql`approved_by IS NOT NULL`),
+      db.select().from(ingredientSynonyms),
+    ]);
+
+    // Build lookup maps in memory
+    const synonymToCanonical = new Map<string, string>();
+    for (const syn of synonymsList) {
+      synonymToCanonical.set(syn.variantName.toLowerCase().trim(), syn.canonicalName.toLowerCase().trim());
+    }
+
+    const normToFoodId = new Map<string, string>();
+    for (const map of approvedMaps) {
+      normToFoodId.set(map.normalizedIngredientName.toLowerCase().trim(), map.nutritionFoodId);
+    }
+
+    // Match each ingredient in memory
+    const matchedFoodIds = new Set<string>();
+    const ingToFoodId = new Map<string, string>();
+
+    for (const rawName of ingredientNames) {
+      const clean = normalizeIngredientName(rawName);
+      let foodId: string | undefined = normToFoodId.get(clean);
+
+      // Synonym lookup
+      if (!foodId && synonymToCanonical.has(clean)) {
+        const canonical = synonymToCanonical.get(clean)!;
+        foodId = normToFoodId.get(canonical);
+      }
+
+      // Substring fallback in memory
+      if (!foodId) {
+        for (const entry of approvedMaps) {
+          const normEntry = entry.normalizedIngredientName.toLowerCase().trim();
+          if (clean.includes(normEntry) || normEntry.includes(clean)) {
+            foodId = entry.nutritionFoodId;
+            break;
+          }
+        }
+      }
+
+      if (foodId) {
+        matchedFoodIds.add(foodId);
+        ingToFoodId.set(rawName, foodId);
+      }
+    }
+
+    if (matchedFoodIds.size === 0) return result;
+
+    // 2. Fetch all matching food records in a SINGLE query
+    const foodIdsArray = Array.from(matchedFoodIds);
+    const foodRows = await db
+      .select()
+      .from(nutritionFoods)
+      .where(sql`id IN (${sql.join(foodIdsArray.map(id => sql`${id}`), sql`, `)})`);
+
+    const foodRecordMap = new Map<string, NutritionFoodRecord>();
+    for (const row of foodRows) {
+      foodRecordMap.set(row.id, parseFoodRow(row));
+    }
+
+    // Associate ingredient names to food records
+    for (const [rawName, foodId] of ingToFoodId.entries()) {
+      const food = foodRecordMap.get(foodId);
+      if (food) {
+        result.set(rawName, food);
+      }
+    }
+
+    return result;
+  } catch (error) {
+    console.error('Error in batchFindApprovedFoodMappings:', error);
+    return result;
+  }
+}
+
 
 /**
  * Searches master food records by name or alias.

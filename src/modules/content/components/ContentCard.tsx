@@ -120,7 +120,7 @@ export function ContentCard(props: ContentCardProps) {
       <div>
         {/* Cover Image (Swiggy / Zomato standard 16:9 widescreen aspect ratio) */}
         {imageUrl ? (
-          <Link href={detailHref} className="relative block w-full aspect-[16/9] overflow-hidden bg-neutral-900">
+          <Link href={detailHref} prefetch={false} className="relative block w-full aspect-[16/9] overflow-hidden bg-neutral-900">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={imageUrl}
@@ -166,7 +166,7 @@ export function ContentCard(props: ContentCardProps) {
         {/* Body Content */}
         <div className="p-4.5 space-y-2.5">
           {/* Recipe Title as Main Link (No Separate Button Required) */}
-          <Link href={detailHref} className="block group/title">
+          <Link href={detailHref} prefetch={false} className="block group/title">
             <h3 className="text-base font-bold text-white group-hover/title:text-orange-400 transition-colors line-clamp-2 leading-snug cursor-pointer">
               {title || 'Untitled Entity'}
             </h3>

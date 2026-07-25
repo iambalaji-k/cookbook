@@ -3,7 +3,7 @@ import { initializeDatabase } from '@/core/db/init-db';
 import { getAIDrafts } from '@/modules/drafts/services/draft-service';
 import { Sparkles, Clock, CheckCircle2, XCircle, ArrowRight } from 'lucide-react';
 
-export const revalidate = 0;
+export const revalidate = 30;
 
 export default async function AIDraftsQueuePage({
   searchParams,

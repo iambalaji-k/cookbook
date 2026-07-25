@@ -2,7 +2,7 @@ import { db } from '@/core/db';
 import { sql } from 'drizzle-orm';
 import { contentEntities, ingredients } from '@/core/db/schema/content';
 import { recipeNutritionCache } from '../database/schema';
-import { findApprovedFoodMapping } from './nutrition-service';
+import { findApprovedFoodMapping, batchFindApprovedFoodMappings } from './nutrition-service';
 import { convertQuantityToGrams } from '../utils/quantity-to-grams-converter';
 import { calculateDailyValuePercentages, DVProfile } from '../utils/daily-values';
 import {
@@ -92,9 +92,13 @@ export async function calculateAndCacheRecipeNutrition(
 
     const totalProfile = createEmptyProfile();
 
-    // 3. Process each ingredient deterministically
+    // 3. Batch lookup all ingredient food mappings in 1 single database pass
+    const ingredientNames = ingList.map((ing) => ing.itemName);
+    const foodMap = await batchFindApprovedFoodMappings(ingredientNames);
+
+    // 4. Process each ingredient deterministically in memory
     for (const ing of ingList) {
-      const food = await findApprovedFoodMapping(ing.itemName);
+      const food = foodMap.get(ing.itemName);
 
       if (!food) {
         unmappedNames.push(ing.itemName);
@@ -102,6 +106,7 @@ export async function calculateAndCacheRecipeNutrition(
       }
 
       mappedCount++;
+
 
       // Convert unit + amount to grams using food's specific physical properties
       const { grams } = convertQuantityToGrams(ing.amount, ing.unit, food);

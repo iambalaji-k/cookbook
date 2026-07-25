@@ -1,6 +1,8 @@
 import { interpretNaturalLanguageQuery, type NLQueryInterpretation } from './nl-interpreter';
 import { searchContentFTS, type SearchResultItem } from './search-service';
-import { getContentEntityById } from '@/modules/content/services/content-service';
+import { db } from '@/core/db';
+import { contentEntities } from '@/core/db/schema';
+import { inArray } from 'drizzle-orm';
 
 export interface HybridSearchResult {
   interpretation: NLQueryInterpretation;
@@ -23,8 +25,20 @@ export async function executeHybridSearch(rawQuery: string): Promise<HybridSearc
   // 4. Apply structured constraint filtering (total cook time, cuisine, difficulty)
   const filtered: Array<SearchResultItem & { totalTimeMinutes?: number }> = [];
 
+  if (candidates.length === 0) {
+    return { interpretation, results: [] };
+  }
+
+  // Batch-fetch full entity details for all candidates in one query
+  const entityIds = candidates.map((c) => c.id);
+  const fullEntities = await db
+    .select()
+    .from(contentEntities)
+    .where(inArray(contentEntities.id, entityIds));
+  const entityMap = new Map(fullEntities.map((e) => [e.id, e]));
+
   for (const candidate of candidates) {
-    const fullEntity = await getContentEntityById(candidate.id);
+    const fullEntity = entityMap.get(candidate.id);
     if (!fullEntity) continue;
 
     const prep = fullEntity.prepTimeMinutes || 0;

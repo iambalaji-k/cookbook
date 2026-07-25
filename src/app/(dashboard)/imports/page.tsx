@@ -4,7 +4,7 @@ import { getRawImports } from '@/modules/imports/services/import-service';
 import { DeleteImportButton } from '@/modules/imports/components/DeleteImportButton';
 import { FileText, Plus, ExternalLink, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
 
-export const revalidate = 0;
+export const revalidate = 30;
 
 export default async function RawImportsPage() {
   await initializeDatabase();

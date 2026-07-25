@@ -4,7 +4,7 @@ import { getContentEntityBySlug } from '@/modules/content/services/content-servi
 import { ContentViewer } from '@/modules/content/components/ContentViewer';
 import { db } from '@/core/db';
 
-export const revalidate = 0;
+export const revalidate = 60;
 
 export default async function ContentDetailPage({
   params,
