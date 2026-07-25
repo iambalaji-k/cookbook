@@ -29,7 +29,14 @@ import { sql } from 'drizzle-orm';
 async function cleanDatabase() {
   console.log(`Cleaning database data [Target: ${process.env.TURSO_DATABASE_URL || 'file:local.db'}]...`);
 
+  // Disable foreign keys temporarily during purge to prevent cascade ordering blocks
+  try { await db.run(sql`PRAGMA foreign_keys = OFF;`); } catch (_) {}
+
   const tablesToClean = [
+    'canonical_ingredient_nutrition_map',
+    'ingredient_synonyms',
+    'recipe_nutrition_cache',
+    'nutrition_foods',
     'ingredients',
     'instructions',
     'images',
@@ -39,10 +46,6 @@ async function cleanDatabase() {
     'comments',
     'ai_drafts',
     'raw_imports',
-    'recipe_nutrition_cache',
-    'canonical_ingredient_nutrition_map',
-    'ingredient_synonyms',
-    'nutrition_foods',
     'content_entities',
   ];
 
@@ -61,6 +64,8 @@ async function cleanDatabase() {
   } catch (err: any) {
     console.warn('! content_fts clear warning:', err.message || err);
   }
+
+  try { await db.run(sql`PRAGMA foreign_keys = ON;`); } catch (_) {}
 
   console.log('✅ Database data successfully cleaned! Settings preserved.');
 }
