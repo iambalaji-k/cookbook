@@ -3,6 +3,7 @@ import { sql } from 'drizzle-orm';
 import { nutritionFoods, canonicalIngredientNutritionMap, ingredientSynonyms } from '../database/schema';
 import { NutritionFoodRecord } from '../types/nutrition.types';
 import { CreateFoodInput } from '../validation/nutrition-schema';
+import { safeJsonParse } from '@/lib/utils';
 
 export function normalizeIngredientName(name: string): string {
   return name
@@ -242,7 +243,7 @@ function parseFoodRow(row: Record<string, any>): NutritionFoodRecord {
   return {
     id: row.id,
     foodName: row.foodName ?? row.food_name ?? 'Unknown Food',
-    aliases: typeof row.aliases === 'string' ? JSON.parse(row.aliases) : (Array.isArray(row.aliases) ? row.aliases : []),
+    aliases: typeof row.aliases === 'string' ? safeJsonParse<string[]>(row.aliases, []) : (Array.isArray(row.aliases) ? row.aliases : []),
     source: row.source ?? 'manual',
     servingSize: Number(row.servingSize ?? row.serving_size ?? 100),
     servingUnit: row.servingUnit ?? row.serving_unit ?? 'g',

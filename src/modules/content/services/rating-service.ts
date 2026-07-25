@@ -1,23 +1,27 @@
 import { db } from '@/core/db';
 import { ratings } from '@/core/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 
 export interface RatingResult {
   rating: number;
+  count?: number;
 }
 
 export async function getRating(entityId: string): Promise<RatingResult> {
   try {
     const [row] = await db
-      .select({ rating: ratings.rating })
+      .select({
+        avgRating: sql<number>`AVG(rating)`,
+        count: sql<number>`COUNT(*)`,
+      })
       .from(ratings)
-      .where(eq(ratings.entityId, entityId))
-      .limit(1);
+      .where(eq(ratings.entityId, entityId));
 
-    return { rating: row?.rating ?? 0 };
+    const rating = row?.avgRating ? Math.round(row.avgRating * 10) / 10 : 0;
+    return { rating, count: row?.count || 0 };
   } catch (err) {
     console.error('Error fetching rating:', err);
-    return { rating: 0 };
+    return { rating: 0, count: 0 };
   }
 }
 

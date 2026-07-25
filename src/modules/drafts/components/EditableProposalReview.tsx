@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 
 import { AIStatsCard } from '@/modules/ai/components/AIStatsCard';
+import { IngredientUnitSelect } from '@/modules/content/components/IngredientUnitSelect';
 
 interface EditableProposalReviewProps {
   draft: {
@@ -436,13 +437,12 @@ export function EditableProposalReview({ draft }: EditableProposalReviewProps) {
                     onChange={(e) => updateIngredient(idx, 'amount', e.target.value ? Number(e.target.value) : null)}
                     className="col-span-2 px-2.5 py-1 rounded bg-neutral-950 border border-neutral-800 text-neutral-100"
                   />
-                  <input
-                    type="text"
-                    placeholder="Unit"
-                    value={ing.unit || ''}
-                    onChange={(e) => updateIngredient(idx, 'unit', e.target.value)}
-                    className="col-span-2 px-2.5 py-1 rounded bg-neutral-950 border border-neutral-800 text-neutral-100"
-                  />
+                  <div className="col-span-2">
+                    <IngredientUnitSelect
+                      value={ing.unit || ''}
+                      onChange={(val) => updateIngredient(idx, 'unit', val)}
+                    />
+                  </div>
                   <input
                     type="text"
                     placeholder="Notes (minced...)"

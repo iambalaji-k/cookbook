@@ -74,7 +74,7 @@ export async function interpretNaturalLanguageQuery(
     .replace(/\b(under|less than|within|mins|minutes|quick|easy|make|recipe|with|for|dinner|lunch|breakfast)\b/gi, ' ')
     .replace(/[^\w\s]/g, ' ')
     .split(/\s+/)
-    .filter((w) => w.length > 2);
+    .filter((w) => w.length >= 2);
 
   return {
     rawQuery: text,

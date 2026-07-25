@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, Trash2, Save, ArrowLeft } from 'lucide-react';
 import { generateSlug } from '../utils/slug';
+import { IngredientUnitSelect } from './IngredientUnitSelect';
 
 interface ContentFormProps {
   initialData?: {
@@ -348,12 +349,9 @@ export function ContentForm({ initialData, isEditing = false }: ContentFormProps
               </div>
 
               <div className="sm:col-span-2">
-                <input
-                  type="text"
-                  placeholder="Unit (e.g. cups, tbsp)"
+                <IngredientUnitSelect
                   value={ing.unit || ''}
-                  onChange={(e) => updateIngredient(idx, 'unit', e.target.value)}
-                  className="w-full px-3 py-1.5 rounded-lg bg-neutral-950 border border-neutral-800 text-neutral-100 focus:outline-none focus:border-orange-500"
+                  onChange={(val) => updateIngredient(idx, 'unit', val)}
                 />
               </div>
 

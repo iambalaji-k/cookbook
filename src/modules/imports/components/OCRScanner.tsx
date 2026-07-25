@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Camera, Upload, RefreshCw, CheckCircle2, AlertCircle, FileText } from 'lucide-react';
+import { Camera, Upload, RefreshCw, AlertCircle } from 'lucide-react';
 
 interface OCRScannerProps {
   onScanComplete: (extractedText: string, imagePreviewUrl: string) => void;

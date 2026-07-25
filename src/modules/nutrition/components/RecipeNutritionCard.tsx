@@ -9,7 +9,6 @@ import {
   AlertTriangle, 
   PlusCircle, 
   RotateCw, 
-  CheckCircle2, 
   Info,
   Globe,
   Sparkles

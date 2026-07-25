@@ -2,7 +2,8 @@ import { db } from '@/core/db';
 import { sql } from 'drizzle-orm';
 import { contentEntities, ingredients } from '@/core/db/schema/content';
 import { recipeNutritionCache } from '../database/schema';
-import { findApprovedFoodMapping, batchFindApprovedFoodMappings } from './nutrition-service';
+import { batchFindApprovedFoodMappings } from './nutrition-service';
+import { safeJsonParse } from '@/lib/utils';
 import { convertQuantityToGrams } from '../utils/quantity-to-grams-converter';
 import { calculateDailyValuePercentages, DVProfile } from '../utils/daily-values';
 import {
@@ -161,26 +162,27 @@ export async function calculateAndCacheRecipeNutrition(
 
     // 5. Calculate Per Serving Profile
     const perServingProfile = createEmptyProfile();
-    const round2 = (num: number) => Math.round(num * 10) / 10;
+    const roundMacro = (num: number) => Math.round(num * 10) / 10;
+    const roundMicro = (num: number) => Math.round(num * 1000) / 1000;
 
     (Object.keys(totalProfile.macros) as Array<keyof MacroNutrients>).forEach((key) => {
-      perServingProfile.macros[key] = round2(totalProfile.macros[key] / servings);
-      totalProfile.macros[key] = round2(totalProfile.macros[key]);
+      perServingProfile.macros[key] = roundMacro(totalProfile.macros[key] / servings);
+      totalProfile.macros[key] = roundMacro(totalProfile.macros[key]);
     });
 
     (Object.keys(totalProfile.vitamins) as Array<keyof VitaminNutrients>).forEach((key) => {
-      perServingProfile.vitamins[key] = round2(totalProfile.vitamins[key] / servings);
-      totalProfile.vitamins[key] = round2(totalProfile.vitamins[key]);
+      perServingProfile.vitamins[key] = roundMicro(totalProfile.vitamins[key] / servings);
+      totalProfile.vitamins[key] = roundMicro(totalProfile.vitamins[key]);
     });
 
     (Object.keys(totalProfile.minerals) as Array<keyof MineralNutrients>).forEach((key) => {
-      perServingProfile.minerals[key] = round2(totalProfile.minerals[key] / servings);
-      totalProfile.minerals[key] = round2(totalProfile.minerals[key]);
+      perServingProfile.minerals[key] = roundMicro(totalProfile.minerals[key] / servings);
+      totalProfile.minerals[key] = roundMicro(totalProfile.minerals[key]);
     });
 
     (Object.keys(totalProfile.other) as Array<keyof OtherNutrients>).forEach((key) => {
-      perServingProfile.other[key] = round2(totalProfile.other[key] / servings);
-      totalProfile.other[key] = round2(totalProfile.other[key]);
+      perServingProfile.other[key] = roundMicro(totalProfile.other[key] / servings);
+      totalProfile.other[key] = roundMicro(totalProfile.other[key]);
     });
 
     // 6. Calculate % Daily Values
@@ -249,8 +251,8 @@ export async function getRecipeNutrition(recipeId: string): Promise<RecipeNutrit
 
     if (rows.length > 0) {
       const row = rows[0];
-      const perServing = JSON.parse(row.perServingNutrition);
-      const total = JSON.parse(row.totalNutrition);
+      const perServing = safeJsonParse(row.perServingNutrition, createEmptyProfile());
+      const total = safeJsonParse(row.totalNutrition, createEmptyProfile());
       const dvPercentages = calculateDailyValuePercentages(perServing, 'US_FDA');
 
       // Fetch actual servings from the recipe entity
@@ -266,7 +268,7 @@ export async function getRecipeNutrition(recipeId: string): Promise<RecipeNutrit
         nutritionCoveragePercent: row.nutritionCoveragePercent,
         mappedIngredientCount: row.mappedIngredientCount,
         totalIngredientCount: row.totalIngredientCount,
-        unmappedIngredients: row.unmappedIngredients ? JSON.parse(row.unmappedIngredients) : [],
+        unmappedIngredients: safeJsonParse<string[]>(row.unmappedIngredients, []),
         totalNutrition: total,
         perServingNutrition: perServing,
         dailyValuePercentages: dvPercentages,

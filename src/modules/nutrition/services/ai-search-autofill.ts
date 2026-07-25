@@ -87,32 +87,53 @@ function buildGapList(data: Partial<CreateFoodInput>): string[] {
 
 export async function searchDuckDuckGo(ingredientName: string): Promise<DuckDuckGoResult | null> {
   try {
-    const query = `${ingredientName} nutrition per 100g`;
-    const endpoint = `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1&no_redirect=1`;
+    const cleanName = ingredientName.trim();
+    const queryCandidates = [cleanName, `${cleanName} food`, `${cleanName} fruit`];
 
-    const res = await fetch(endpoint, {
-      headers: { Accept: 'application/json' },
-      next: { revalidate: 86400 },
-    });
+    for (const q of queryCandidates) {
+      const endpoint = `https://api.duckduckgo.com/?q=${encodeURIComponent(q)}&format=json&no_html=1`;
 
-    if (!res.ok) {
-      console.warn('DuckDuckGo API error:', res.status);
-      return null;
+      const res = await fetch(endpoint, {
+        headers: {
+          Accept: 'application/json',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        },
+        next: { revalidate: 86400 },
+      });
+
+      if (!res.ok) continue;
+
+      const data = await res.json();
+
+      const relatedTopics: Array<{ text: string; url: string }> = [];
+      const extractTopics = (list: any[]) => {
+        for (const t of list || []) {
+          if (t.Text && t.FirstURL) {
+            relatedTopics.push({ text: t.Text, url: t.FirstURL });
+          }
+          if (Array.isArray(t.Topics)) {
+            extractTopics(t.Topics);
+          }
+        }
+      };
+
+      extractTopics(data.RelatedTopics);
+      const abstractText = data.AbstractText || data.Abstract || '';
+
+      if (abstractText || relatedTopics.length > 0 || data.Definition) {
+        return {
+          abstractText,
+          abstractURL: data.AbstractURL || '',
+          heading: data.Heading || '',
+          relatedTopics,
+          definition: data.Definition || '',
+          definitionURL: data.DefinitionURL || '',
+          source: 'duckduckgo_instant_answer',
+        };
+      }
     }
 
-    const data = await res.json();
-
-    return {
-      abstractText: data.AbstractText || '',
-      abstractURL: data.AbstractURL || '',
-      heading: data.Heading || '',
-      relatedTopics: (data.RelatedTopics || [])
-        .filter((t: { Text?: string; FirstURL?: string }) => t.Text && t.FirstURL)
-        .map((t: { Text?: string; FirstURL?: string }) => ({ text: t.Text || '', url: t.FirstURL || '' })),
-      definition: data.Definition || '',
-      definitionURL: data.DefinitionURL || '',
-      source: 'duckduckgo_instant_answer',
-    };
+    return null;
   } catch (error) {
     console.warn('DuckDuckGo search failed:', error);
     return null;

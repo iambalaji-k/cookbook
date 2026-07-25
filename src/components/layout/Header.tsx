@@ -30,14 +30,16 @@ export function Header() {
   useEffect(() => {
     let cancelled = false;
 
-    if (!searchQuery.trim()) {
-      setLiveResults([]);
-      setShowDropdown(false);
-      setLoading(false);
-      return;
-    }
-
     const timer = setTimeout(async () => {
+      if (!searchQuery.trim()) {
+        if (!cancelled) {
+          setLiveResults([]);
+          setShowDropdown(false);
+          setLoading(false);
+        }
+        return;
+      }
+
       setLoading(true);
       setShowDropdown(true);
 

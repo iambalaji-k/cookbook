@@ -66,6 +66,8 @@ export async function searchContentFTS(
   }
 
   try {
+    const fetchLimit = contentType && contentType !== 'all' ? Math.max(limit * 4, 100) : limit;
+
     // 1. Try SQLite FTS5 BM25 match query
     const ftsResults = await db.run(sql`
       SELECT 
@@ -80,7 +82,7 @@ export async function searchContentFTS(
       FROM content_fts 
       WHERE content_fts MATCH ${sanitizedFTSQuery}
       ORDER BY rank ASC
-      LIMIT ${limit};
+      LIMIT ${fetchLimit};
     `);
 
     const rawRows = (ftsResults.rows || []) as unknown as FTSRow[];
@@ -127,7 +129,7 @@ export async function searchContentFTS(
     }
 
     if (results.length > 0) {
-      return results;
+      return results.slice(0, limit);
     }
   } catch (ftsErr) {
     console.warn('FTS5 Query Fallback Triggered:', ftsErr);

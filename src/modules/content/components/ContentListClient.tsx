@@ -31,8 +31,7 @@ export function ContentListClient({ initialData }: { initialData: ContentEntityD
   const [items, setItems] = useState<ContentEntityData[]>(initialData)
   const [loading, setLoading] = useState(false)
 
-  const fetchItems = useCallback(async () => {
-    setLoading(true)
+  const fetchItems = useCallback(async (isMounted: () => boolean) => {
     try {
       const params = new URLSearchParams()
       if (type) params.set('type', type)
@@ -42,18 +41,28 @@ export function ContentListClient({ initialData }: { initialData: ContentEntityD
 
       const res = await fetch(`/api/content?${params.toString()}`)
       const json = await res.json()
-      if (res.ok && json.data) {
+      if (isMounted() && res.ok && json.data) {
         setItems(json.data)
       }
     } catch {
-      setItems([])
+      if (isMounted()) setItems([])
     } finally {
-      setLoading(false)
+      if (isMounted()) setLoading(false)
     }
   }, [type, q, page])
 
   useEffect(() => {
-    fetchItems()
+    let mounted = true
+    const timer = setTimeout(() => {
+      if (mounted) {
+        setLoading(true)
+        fetchItems(() => mounted)
+      }
+    }, 0)
+    return () => {
+      mounted = false
+      clearTimeout(timer)
+    }
   }, [fetchItems])
 
   const navigate = (params: Record<string, string | undefined>) => {

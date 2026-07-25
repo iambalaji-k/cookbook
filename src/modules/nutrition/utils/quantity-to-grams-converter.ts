@@ -5,7 +5,12 @@ import { PhysicalConversionParameters } from '../types/nutrition.types';
  */
 export function normalizeUnitString(unit: string | null | undefined): string {
   if (!unit) return '';
-  return unit.trim().toLowerCase().replace(/s$/, ''); // trim, lowercase, remove trailing 's'
+  return unit
+    .trim()
+    .toLowerCase()
+    .replace(/\./g, '')
+    .replace(/\s+/g, ' ')
+    .replace(/s$/, ''); // trim, lowercase, strip dots, remove trailing 's'
 }
 
 /**

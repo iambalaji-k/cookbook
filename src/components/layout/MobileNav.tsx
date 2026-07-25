@@ -42,7 +42,8 @@ export function MobileNav() {
 
   // Auto-close drawer on route change
   useEffect(() => {
-    setIsOpen(false);
+    const timer = setTimeout(() => setIsOpen(false), 0);
+    return () => clearTimeout(timer);
   }, [pathname]);
 
   // Lock body scroll when mobile drawer is open

@@ -5,7 +5,8 @@ import {
   instructions, 
   images, 
   tags, 
-  revisions 
+  revisions,
+  recipeNutritionCache 
 } from '@/core/db/schema';
 import { createContentEntitySchema, type CreateContentEntityInput, type UpdateContentEntityInput } from '../validation';
 import { generateSlug } from '../utils/slug';
@@ -189,6 +190,8 @@ export async function updateContentEntity(id: string, rawInput: any) {
         }))
       );
     }
+    // Invalidate stale nutrition cache if ingredients changed
+    await db.delete(recipeNutritionCache).where(eq(recipeNutritionCache.recipeId, id));
   }
 
   // 4. Update instructions if provided
@@ -327,6 +330,7 @@ export async function getContentEntities(options?: {
  */
 export async function deleteContentEntity(id: string) {
   await db.run(sql`DELETE FROM content_fts WHERE entity_id = ${id}`);
+  await db.delete(recipeNutritionCache).where(eq(recipeNutritionCache.recipeId, id));
   await db.delete(contentEntities).where(eq(contentEntities.id, id));
   return { success: true };
 }

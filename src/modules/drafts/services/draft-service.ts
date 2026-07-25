@@ -8,6 +8,7 @@ import {
 } from '@/modules/content/services/content-service';
 import { updateRawImportStatus, getRawImportById } from '@/modules/imports/services/import-service';
 import { eq, desc } from 'drizzle-orm';
+import { safeJsonParse } from '@/lib/utils';
 
 /**
  * Creates a new staged proposal entry in `ai_drafts`.
@@ -67,7 +68,7 @@ export async function getAIDraftById(id: string) {
 
   return {
     ...draft,
-    proposedData: JSON.parse(draft.proposedDataJSON),
+    proposedData: safeJsonParse(draft.proposedDataJSON, {}),
     sourceImport,
     targetEntity,
   };

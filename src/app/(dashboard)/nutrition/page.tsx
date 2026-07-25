@@ -146,7 +146,7 @@ export default function NutritionDashboardPage() {
           </div>
         ) : foods.length === 0 ? (
           <div className="py-12 text-center text-zinc-400 text-xs space-y-2 font-sans">
-            <p>No food items match "{searchQuery}".</p>
+            <p>No food items match &quot;{searchQuery}&quot;.</p>
           </div>
         ) : (
           <div className="overflow-x-auto border border-neutral-800/90 rounded-xl max-h-[600px] overflow-y-auto">

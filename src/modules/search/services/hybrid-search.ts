@@ -51,7 +51,7 @@ export async function executeHybridSearch(rawQuery: string): Promise<HybridSearc
     }
 
     // Filter by cuisine
-    if (interpretation.cuisine && fullEntity.cuisine && !new RegExp(interpretation.cuisine, 'i').test(fullEntity.cuisine)) {
+    if (interpretation.cuisine && fullEntity.cuisine && !fullEntity.cuisine.toLowerCase().includes(interpretation.cuisine.toLowerCase())) {
       continue;
     }
 

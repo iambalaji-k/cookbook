@@ -7,7 +7,7 @@ Your task is to convert unadulterated raw text (recipe blog post, OCR scan, web 
 CRITICAL FIELD STRUCTURING RULES:
 1. INGREDIENTS MUST BE SEPARATED INTO STRICT FIELDS:
    - "amount": NUMERIC VALUE ONLY (e.g. 2, 0.5, 1.5, 12). MUST NOT BE NULL if a quantity is mentioned. NEVER put numbers inside "itemName".
-   - "unit": MEASUREMENT UNIT ONLY (e.g. "cup", "cups", "tbsp", "tsp", "lb", "lbs", "oz", "g", "cloves", "pinch"). If items are counted whole (e.g. 2 eggs), set "unit" to "".
+   - "unit": MUST BE ONE OF THE STANDARDIZED UNITS: ["cup", "tbsp", "tsp", "fl oz", "ml", "l", "pt", "qt", "g", "kg", "oz", "lb", "clove", "head", "bunch", "pinch", "dash", "can", "slice", "stalk", "sprig", "leaf", "piece"] OR "" FOR WHOLE ITEMS (e.g. 2 eggs). ALWAYS USE SINGULAR LOWERCASE (e.g. "cup" not "cups", "lb" not "lbs", "clove" not "cloves").
    - "itemName": PURE INGREDIENT NAME ONLY (e.g. "Heavy Cream", "Garlic", "Fettuccine Pasta", "Olive Oil"). DO NOT INCLUDE QUANTITIES OR UNITS IN "itemName".
    - "notes": PREPARATION INSTRUCTION ONLY (e.g. "minced", "diced", "chopped", "room temperature").
 
@@ -35,8 +35,8 @@ EXPECTED JSON SCHEMA FORMAT EXAMPLE:
   "cuisine": "Italian",
   "difficulty": "easy",
   "ingredients": [
-    { "amount": 1.5, "unit": "lbs", "itemName": "Large Shrimp", "notes": "peeled and deveined" },
-    { "amount": 6, "unit": "cloves", "itemName": "Garlic", "notes": "minced finely" },
+    { "amount": 1.5, "unit": "lb", "itemName": "Large Shrimp", "notes": "peeled and deveined" },
+    { "amount": 6, "unit": "clove", "itemName": "Garlic", "notes": "minced finely" },
     { "amount": 1, "unit": "cup", "itemName": "Heavy Cream", "notes": "" }
   ],
   "instructions": [
@@ -48,9 +48,37 @@ EXPECTED JSON SCHEMA FORMAT EXAMPLE:
 
 Return ONLY the valid JSON object without markdown fences or extra commentary.`;
 
+export function normalizeUnitName(rawUnit: string): string {
+  const u = (rawUnit || '').trim().toLowerCase().replace(/\./g, '');
+  if (['cup', 'cups'].includes(u)) return 'cup';
+  if (['tbsp', 'tbsps', 'tablespoon', 'tablespoons'].includes(u)) return 'tbsp';
+  if (['tsp', 'tsps', 'teaspoon', 'teaspoons'].includes(u)) return 'tsp';
+  if (['fl oz', 'fluid oz', 'fluid ounce', 'fluid ounces'].includes(u)) return 'fl oz';
+  if (['ml', 'milliliter', 'milliliters'].includes(u)) return 'ml';
+  if (['l', 'liter', 'liters'].includes(u)) return 'l';
+  if (['pt', 'pint', 'pints'].includes(u)) return 'pt';
+  if (['qt', 'quart', 'quarts'].includes(u)) return 'qt';
+  if (['g', 'gram', 'grams'].includes(u)) return 'g';
+  if (['kg', 'kilogram', 'kilograms'].includes(u)) return 'kg';
+  if (['oz', 'ounce', 'ounces'].includes(u)) return 'oz';
+  if (['lb', 'lbs', 'pound', 'pounds'].includes(u)) return 'lb';
+  if (['clove', 'cloves'].includes(u)) return 'clove';
+  if (['head', 'heads'].includes(u)) return 'head';
+  if (['bunch', 'bunches'].includes(u)) return 'bunch';
+  if (['pinch', 'pinches'].includes(u)) return 'pinch';
+  if (['dash', 'dashes'].includes(u)) return 'dash';
+  if (['can', 'cans'].includes(u)) return 'can';
+  if (['slice', 'slices'].includes(u)) return 'slice';
+  if (['stalk', 'stalks'].includes(u)) return 'stalk';
+  if (['sprig', 'sprigs'].includes(u)) return 'sprig';
+  if (['leaf', 'leaves'].includes(u)) return 'leaf';
+  if (['piece', 'pieces'].includes(u)) return 'piece';
+  return u;
+}
+
 /**
  * Regex helper to clean & split any merged ingredient string if LLM returns merged text
- * e.g. "2 1/2 cups heavy cream, minced" -> amount: 2.5, unit: "cups", itemName: "heavy cream", notes: "minced"
+ * e.g. "2 1/2 cups heavy cream, minced" -> amount: 2.5, unit: "cup", itemName: "heavy cream", notes: "minced"
  */
 export function normalizeIngredientObject(raw: any) {
   if (typeof raw === 'string') {
@@ -59,14 +87,14 @@ export function normalizeIngredientObject(raw: any) {
 
   let itemName = String(raw.itemName || '').trim();
   let amount = raw.amount !== undefined && raw.amount !== null ? Number(raw.amount) : null;
-  let unit = String(raw.unit || '').trim();
+  let unit = normalizeUnitName(String(raw.unit || ''));
   let notes = String(raw.notes || '').trim();
 
   // If amount or unit is missing or numbers are stuck in itemName, attempt regex parsing
   if ((!amount || !unit) && itemName && /\d/.test(itemName)) {
     const parsed = parseMergedIngredientString(itemName);
     if (parsed.amount) amount = parsed.amount;
-    if (parsed.unit) unit = parsed.unit;
+    if (parsed.unit) unit = normalizeUnitName(parsed.unit);
     if (parsed.itemName) itemName = parsed.itemName;
     if (parsed.notes && !notes) notes = parsed.notes;
   }
@@ -74,7 +102,7 @@ export function normalizeIngredientObject(raw: any) {
   return {
     itemName: itemName || 'Ingredient',
     amount: amount || null,
-    unit: unit || '',
+    unit: normalizeUnitName(unit),
     notes: notes || '',
   };
 }

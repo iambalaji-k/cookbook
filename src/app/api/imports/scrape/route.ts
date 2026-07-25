@@ -13,6 +13,32 @@ export async function POST(request: Request) {
       );
     }
 
+    try {
+      const parsedUrl = new URL(url);
+      const hostname = parsedUrl.hostname.toLowerCase();
+      const isPrivate = 
+        hostname === 'localhost' ||
+        hostname === '127.0.0.1' ||
+        hostname === '0.0.0.0' ||
+        hostname === '::1' ||
+        hostname.startsWith('169.254.') ||
+        hostname.startsWith('10.') ||
+        hostname.startsWith('192.168.') ||
+        /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(hostname);
+
+      if (isPrivate) {
+        return NextResponse.json(
+          { status: 'error', message: 'Requests to internal or private networks are blocked.' },
+          { status: 400 }
+        );
+      }
+    } catch {
+      return NextResponse.json(
+        { status: 'error', message: 'Invalid URL format' },
+        { status: 400 }
+      );
+    }
+
     // Fetch raw HTML from target web recipe URL
     const res = await fetch(url, {
       headers: {

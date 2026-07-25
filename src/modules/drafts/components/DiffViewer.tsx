@@ -1,4 +1,4 @@
-import { ArrowRight, Plus, Edit, Clock, Tag as TagIcon, ImageIcon } from 'lucide-react';
+import { ArrowRight, Plus, Edit, Clock, Tag as TagIcon } from 'lucide-react';
 
 interface DiffViewerProps {
   targetEntity?: {

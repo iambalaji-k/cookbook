@@ -312,6 +312,24 @@ async function migrate() {
     );
   `);
 
+  // Performance Indexes for Foreign Keys and Common Query Filters
+  for (const idxSql of [
+    'CREATE INDEX IF NOT EXISTS idx_ingredients_entity_id ON ingredients(entity_id);',
+    'CREATE INDEX IF NOT EXISTS idx_instructions_entity_id ON instructions(entity_id);',
+    'CREATE INDEX IF NOT EXISTS idx_images_entity_id ON images(entity_id);',
+    'CREATE INDEX IF NOT EXISTS idx_tags_entity_id ON tags(entity_id);',
+    'CREATE INDEX IF NOT EXISTS idx_revisions_entity_id ON revisions(entity_id);',
+    'CREATE INDEX IF NOT EXISTS idx_ratings_entity_id ON ratings(entity_id);',
+    'CREATE INDEX IF NOT EXISTS idx_comments_entity_id ON comments(entity_id);',
+    'CREATE INDEX IF NOT EXISTS idx_ai_drafts_status ON ai_drafts(status);',
+    'CREATE INDEX IF NOT EXISTS idx_ai_drafts_raw_import_id ON ai_drafts(raw_import_id);',
+    'CREATE INDEX IF NOT EXISTS idx_canonical_map_food_id ON canonical_ingredient_nutrition_map(nutrition_food_id);',
+    'CREATE INDEX IF NOT EXISTS idx_recipe_nutrition_cache_recipe_id ON recipe_nutrition_cache(recipe_id);',
+    'CREATE INDEX IF NOT EXISTS idx_content_entities_type_status ON content_entities(content_type, status);',
+  ]) {
+    try { await db.run(sql.raw(idxSql)); } catch (_) {}
+  }
+
   // 14. FTS5
   try {
     await db.run(sql`
