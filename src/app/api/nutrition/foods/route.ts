@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     const query = searchParams.get('q') || '';
 
     const foods = await searchNutritionFoods(query);
-    return NextResponse.json({ success: true, data: foods }, { headers: cacheHeaders(60, 300) });
+    return NextResponse.json({ success: true, data: foods }, { headers: { 'Cache-Control': 'no-store, max-age=0' } });
   } catch (error: any) {
     return NextResponse.json({ error: error.message || 'Server error' }, { status: 500 });
   }
