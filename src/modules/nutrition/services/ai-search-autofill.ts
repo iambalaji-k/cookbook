@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { executeAIGatewayPipeline } from '@/modules/ai/gateway';
 import { CreateFoodInput } from '../validation/nutrition-schema';
+import { searchUSDAFoodDataCentral } from './usda-api-service';
 
 const nutritionFetchSchema = z.object({
   foodName: z.string().optional(),
@@ -46,7 +47,7 @@ const nutritionFetchSchema = z.object({
   omega6: z.union([z.number().min(0), z.string().transform(v => parseFloat(v) || 0)]).default(0),
   water: z.union([z.number().min(0), z.string().transform(v => parseFloat(v) || 0)]).default(0),
 
-  sourceReference: z.string().default('USDA / Verified Nutrition Reference'),
+  sourceReference: z.string().optional(),
   confidenceNotes: z.string().optional(),
 }).passthrough();
 
@@ -60,10 +61,30 @@ interface DuckDuckGoResult {
   source: string;
 }
 
-/**
- * Queries the DuckDuckGo Instant Answer API (free, no API key required)
- * to retrieve nutrition-related information for an ingredient.
- */
+const NUTRIENT_FIELDS: Array<keyof CreateFoodInput> = [
+  'calories', 'protein', 'fat', 'saturatedFat', 'carbohydrates', 'fiber', 'sugar',
+  'vitaminA', 'vitaminB1', 'vitaminB2', 'vitaminB3', 'vitaminB5',
+  'vitaminB6', 'vitaminB7', 'vitaminB9', 'vitaminB12',
+  'vitaminC', 'vitaminD', 'vitaminE', 'vitaminK',
+  'calcium', 'iron', 'magnesium', 'potassium', 'sodium',
+  'zinc', 'copper', 'selenium', 'manganese', 'phosphorus',
+  'cholesterol', 'omega3', 'omega6', 'water',
+];
+
+function countNonZeroNutrients(data: Partial<CreateFoodInput>): number {
+  return NUTRIENT_FIELDS.filter((f) => {
+    const v = data[f];
+    return typeof v === 'number' && v > 0;
+  }).length;
+}
+
+function buildGapList(data: Partial<CreateFoodInput>): string[] {
+  return NUTRIENT_FIELDS.filter((f) => {
+    const v = data[f];
+    return typeof v !== 'number' || v === 0;
+  });
+}
+
 export async function searchDuckDuckGo(ingredientName: string): Promise<DuckDuckGoResult | null> {
   try {
     const query = `${ingredientName} nutrition per 100g`;
@@ -98,10 +119,6 @@ export async function searchDuckDuckGo(ingredientName: string): Promise<DuckDuck
   }
 }
 
-/**
- * Attempts to extract nutrition values from DuckDuckGo search results
- * using regex patterns. Returns partial data if found.
- */
 function parseDuckDuckGoNutrition(
   ingredientName: string,
   ddg: DuckDuckGoResult
@@ -210,13 +227,93 @@ function parseDuckDuckGoNutrition(
   return result;
 }
 
-/**
- * Searches web/authoritative database via AI Gateway with DuckDuckGo web context.
- *
- * Tier 1: DuckDuckGo search → AI Gateway prompt (web context for AI)
- * Tier 2: Regex parse DuckDuckGo results directly
- * Tier 3: Error → user must enter manually
- */
+async function aiGapFill(ingredientName: string, usdaData: Partial<CreateFoodInput>, ddgContext: string): Promise<Partial<CreateFoodInput>> {
+  const gaps = buildGapList(usdaData);
+  const filledCount = countNonZeroNutrients(usdaData);
+  const totalCount = NUTRIENT_FIELDS.length;
+
+  if (gaps.length === 0) return {};
+
+  const systemPrompt = `You are a professional food scientist. An authoritative database provided partial nutrition data for "${ingredientName}". Provide ONLY the missing nutrient values below. Return ONLY a JSON object with the missing field names and their values per 100g. Do NOT include fields that already have values.`;
+
+  const userPrompt = `Ingredient: "${ingredientName}"
+
+Already known values (USDA FoodData Central):
+${NUTRIENT_FIELDS.filter((f) => {
+  const v = usdaData[f];
+  return typeof v === 'number' && v > 0;
+}).map((f) => `  ${f}: ${usdaData[f]}`).join('\n')}
+
+Missing fields to fill: ${gaps.join(', ')}
+
+Provide realistic values for the missing nutrients per 100g. Use g for macros, mg for minerals, mcg for vitamins.
+Return ONLY a JSON object with the missing fields.${ddgContext ? `\n\nWeb search context for reference:\n${ddgContext}` : ''}`;
+
+  try {
+    const result = await executeAIGatewayPipeline({
+      systemPrompt,
+      userPrompt,
+      schema: z.record(z.string(), z.number()),
+    });
+    return result.data || {};
+  } catch {
+    return {};
+  }
+}
+
+function createFoodInput(ingredientName: string, base: Partial<CreateFoodInput>, gaps: Partial<CreateFoodInput>): CreateFoodInput {
+  const safeNum = (v: any): number => {
+    const n = typeof v === 'number' ? v : parseFloat(String(v));
+    return isNaN(n) ? 0 : n;
+  };
+
+  return {
+    foodName: base.foodName || ingredientName,
+    aliases: base.aliases || [ingredientName.toLowerCase()],
+    source: 'usda',
+    servingSize: 100,
+    servingUnit: 'g',
+    densityGPerMl: 1.0,
+    pieceWeightG: base.pieceWeightG || gaps.pieceWeightG,
+    calories: safeNum(base.calories || gaps.calories),
+    protein: safeNum(base.protein || gaps.protein),
+    fat: safeNum(base.fat || gaps.fat),
+    saturatedFat: safeNum(base.saturatedFat || gaps.saturatedFat),
+    unsaturatedFat: safeNum(base.unsaturatedFat || Math.max(0, safeNum(base.fat || gaps.fat) - safeNum(base.saturatedFat || gaps.saturatedFat))),
+    carbohydrates: safeNum(base.carbohydrates || gaps.carbohydrates),
+    fiber: safeNum(base.fiber || gaps.fiber),
+    sugar: safeNum(base.sugar || gaps.sugar),
+    vitaminA: safeNum(base.vitaminA || gaps.vitaminA),
+    vitaminB1: safeNum(base.vitaminB1 || gaps.vitaminB1),
+    vitaminB2: safeNum(base.vitaminB2 || gaps.vitaminB2),
+    vitaminB3: safeNum(base.vitaminB3 || gaps.vitaminB3),
+    vitaminB5: safeNum(base.vitaminB5 || gaps.vitaminB5),
+    vitaminB6: safeNum(base.vitaminB6 || gaps.vitaminB6),
+    vitaminB7: safeNum(base.vitaminB7 || gaps.vitaminB7),
+    vitaminB9: safeNum(base.vitaminB9 || gaps.vitaminB9),
+    vitaminB12: safeNum(base.vitaminB12 || gaps.vitaminB12),
+    vitaminC: safeNum(base.vitaminC || gaps.vitaminC),
+    vitaminD: safeNum(base.vitaminD || gaps.vitaminD),
+    vitaminE: safeNum(base.vitaminE || gaps.vitaminE),
+    vitaminK: safeNum(base.vitaminK || gaps.vitaminK),
+    calcium: safeNum(base.calcium || gaps.calcium),
+    copper: safeNum(base.copper || gaps.copper),
+    iron: safeNum(base.iron || gaps.iron),
+    magnesium: safeNum(base.magnesium || gaps.magnesium),
+    manganese: safeNum(base.manganese || gaps.manganese),
+    phosphorus: safeNum(base.phosphorus || gaps.phosphorus),
+    potassium: safeNum(base.potassium || gaps.potassium),
+    selenium: safeNum(base.selenium || gaps.selenium),
+    sodium: safeNum(base.sodium || gaps.sodium),
+    zinc: safeNum(base.zinc || gaps.zinc),
+    cholesterol: safeNum(base.cholesterol || gaps.cholesterol),
+    omega3: safeNum(base.omega3 || gaps.omega3),
+    omega6: safeNum(base.omega6 || gaps.omega6),
+    water: safeNum(base.water || gaps.water),
+    sourceReference: base.sourceReference || 'USDA FoodData Central (with AI gap-fill)',
+  };
+}
+
 export async function fetchNutritionDataViaAISearch(ingredientName: string): Promise<CreateFoodInput> {
   const ddgResult = await searchDuckDuckGo(ingredientName);
 
@@ -227,7 +324,28 @@ export async function fetchNutritionDataViaAISearch(ingredientName: string): Pro
       `Definition: ${ddgResult.definition || 'N/A'}\n` +
       `Related Topics:\n${ddgResult.relatedTopics.map((t) => `- ${t.text} (${t.url})`).join('\n')}\n` +
       `--- END WEB CONTEXT ---\n`
-    : '\n(No web search context available)\n';
+    : '';
+
+  let usdaResults: CreateFoodInput[] = [];
+  try {
+    usdaResults = await searchUSDAFoodDataCentral(ingredientName);
+  } catch {
+    console.warn('USDA search failed, falling back to AI');
+  }
+
+  if (usdaResults.length > 0) {
+    const usda = usdaResults[0];
+    const filledCount = countNonZeroNutrients(usda);
+    const totalFields = NUTRIENT_FIELDS.length;
+    const coverage = filledCount / totalFields;
+
+    if (coverage >= 0.5) {
+      const gaps = await aiGapFill(ingredientName, usda, ddgContext);
+      return createFoodInput(ingredientName, usda, gaps);
+    }
+  }
+
+  const ddgContextForAI = ddgContext || '\n(No web search context available)\n';
 
   const systemPrompt = `You are a professional food scientist and nutritionist assistant.
 Your task is to provide accurate, standard nutritional facts per 100 grams for the specified ingredient based on authoritative databases like USDA FoodData Central, McCance and Widdowson, or Indian Food Composition Tables (IFCT).
@@ -274,7 +392,7 @@ Required JSON shape:
 }
 All nutrition values are per 100g. Use g for macros (protein, fat, carbs, fiber, sugar, water, omega3, omega6), mg for minerals (calcium, iron, magnesium, phosphorus, potassium, sodium, zinc, copper, manganese) and cholesterol, mcg for vitamins (A, B1, B2, B3, B5, B6, B7, B9, B12, D, E, K) and selenium, and mg for vitamin C. Return ONLY the JSON object.`;
 
-  const userPrompt = `What are the standard nutrition facts per 100g for: "${ingredientName}"? Reply with ONLY the JSON object, no other text.${ddgContext}`;
+  const userPrompt = `What are the standard nutrition facts per 100g for: "${ingredientName}"? Reply with ONLY the JSON object, no other text.${ddgContextForAI}`;
 
   try {
     const result = await executeAIGatewayPipeline({
