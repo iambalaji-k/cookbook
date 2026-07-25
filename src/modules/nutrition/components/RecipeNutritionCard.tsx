@@ -14,7 +14,7 @@ import {
   Globe,
   Sparkles
 } from 'lucide-react';
-import { RecipeNutritionCalculationResult } from '../types/nutrition.types';
+import { RecipeNutritionCalculationResult, FullNutritionProfile, DailyValuePercentages } from '../types/nutrition.types';
 import { DVProfile } from '../utils/daily-values';
 import { ManualFoodModal } from './ManualFoodModal';
 
