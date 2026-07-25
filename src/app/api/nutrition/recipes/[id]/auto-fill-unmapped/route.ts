@@ -4,6 +4,24 @@ import { calculateAndCacheRecipeNutrition } from '@/modules/nutrition/services/c
 import { fetchNutritionDataViaAISearch } from '@/modules/nutrition/services/ai-search-autofill';
 import { createCustomFoodAndMap } from '@/modules/nutrition/services/nutrition-service';
 
+export const maxDuration = 60;
+
+const CONCURRENCY = 3;
+
+async function processIngredient(ingredientName: string) {
+  try {
+    const nutritionData = await fetchNutritionDataViaAISearch(ingredientName);
+    const { food } = await createCustomFoodAndMap({
+      ...nutritionData,
+      ingredientNameToMap: ingredientName,
+      approvedBy: 'AI Auto-Fill Batch',
+    });
+    return { ingredient: ingredientName, status: 'mapped' as const, foodName: food.foodName };
+  } catch (err: any) {
+    return { ingredient: ingredientName, status: 'failed' as const, error: err.message || 'Unknown error' };
+  }
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -24,27 +42,10 @@ export async function POST(
 
     const results: Array<{ ingredient: string; status: string; foodName?: string; error?: string }> = [];
 
-    for (const ingredientName of ingredients) {
-      try {
-        const nutritionData = await fetchNutritionDataViaAISearch(ingredientName);
-        const { food } = await createCustomFoodAndMap({
-          ...nutritionData,
-          ingredientNameToMap: ingredientName,
-          approvedBy: 'AI Auto-Fill Batch',
-        });
-
-        results.push({
-          ingredient: ingredientName,
-          status: 'mapped',
-          foodName: food.foodName,
-        });
-      } catch (err: any) {
-        results.push({
-          ingredient: ingredientName,
-          status: 'failed',
-          error: err.message || 'Unknown error',
-        });
-      }
+    for (let i = 0; i < ingredients.length; i += CONCURRENCY) {
+      const batch = ingredients.slice(i, i + CONCURRENCY);
+      const batchResults = await Promise.all(batch.map(processIngredient));
+      results.push(...batchResults);
     }
 
     const mappingSuccess = results.filter((r) => r.status === 'mapped').length;

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { 
   Flame, 
   Activity, 
@@ -34,7 +34,9 @@ export function RecipeNutritionCard({ recipeId }: RecipeNutritionCardProps) {
   const [showMicros, setShowMicros] = useState(false);
   const [manualModalIngredient, setManualModalIngredient] = useState<string | null>(null);
   const [autoFilling, setAutoFilling] = useState(false);
+  const [autoFillProgress, setAutoFillProgress] = useState<string | null>(null);
   const [autoFillResults, setAutoFillResults] = useState<Record<string, string> | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -75,14 +77,20 @@ export function RecipeNutritionCard({ recipeId }: RecipeNutritionCardProps) {
 
   const handleAutoFillAll = async () => {
     if (!nutrition || nutrition.unmappedIngredients.length === 0) return;
+    const total = nutrition.unmappedIngredients.length;
     setAutoFilling(true);
+    setAutoFillProgress(`0/${total}`);
     setAutoFillResults(null);
+    setError(null);
+
+    abortRef.current = new AbortController();
 
     try {
       const res = await fetch(`/api/nutrition/recipes/${recipeId}/auto-fill-unmapped`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ingredients: nutrition.unmappedIngredients }),
+        signal: abortRef.current.signal,
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || 'Auto-fill failed');
@@ -92,12 +100,22 @@ export function RecipeNutritionCard({ recipeId }: RecipeNutritionCardProps) {
         resultMap[r.ingredient] = r.status === 'mapped' ? '✅' : '❌';
       }
       setAutoFillResults(resultMap);
+      setAutoFillProgress(`${json.mapped}/${total}`);
       setNutrition(json.nutrition);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Auto-fill failed');
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        setError('Auto-fill cancelled');
+      } else {
+        setError(err instanceof Error ? err.message : 'Auto-fill failed');
+      }
     } finally {
       setAutoFilling(false);
+      abortRef.current = null;
     }
+  };
+
+  const handleCancelAutoFill = () => {
+    abortRef.current?.abort();
   };
 
   if (loading) {
@@ -240,7 +258,7 @@ export function RecipeNutritionCard({ recipeId }: RecipeNutritionCardProps) {
               </button>
             ))}
           </div>
-          <div className="pt-1">
+          <div className="pt-1 flex items-center gap-2">
             <button
               onClick={handleAutoFillAll}
               disabled={autoFilling}
@@ -251,8 +269,16 @@ export function RecipeNutritionCard({ recipeId }: RecipeNutritionCardProps) {
               ) : (
                 <Sparkles className="w-3.5 h-3.5" />
               )}
-              <span>{autoFilling ? 'Auto-Filling...' : `Auto-Fill All ${nutrition.unmappedIngredients.length} Unmapped`}</span>
+              <span>{autoFilling ? `Auto-Filling... ${autoFillProgress || ''}` : `Auto-Fill All ${nutrition.unmappedIngredients.length} Unmapped`}</span>
             </button>
+            {autoFilling && (
+              <button
+                onClick={handleCancelAutoFill}
+                className="px-2.5 py-1.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-[11px] font-semibold hover:bg-red-500/20 transition"
+              >
+                Cancel
+              </button>
+            )}
           </div>
         </div>
       )}
