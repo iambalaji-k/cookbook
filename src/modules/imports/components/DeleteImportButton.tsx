@@ -19,6 +19,7 @@ export function DeleteImportButton({ importId, snippet }: DeleteImportButtonProp
       : `this raw import`;
     if (!confirm(`Are you sure you want to delete ${label}?`)) return;
 
+    if (deleting) return;
     setDeleting(true);
     try {
       const res = await fetch(`/api/imports/${importId}`, { method: 'DELETE' });
@@ -26,6 +27,7 @@ export function DeleteImportButton({ importId, snippet }: DeleteImportButtonProp
         router.push('/imports');
         router.refresh();
       }
+      setDeleting(false);
     } catch (e) {
       console.error(e);
       setDeleting(false);

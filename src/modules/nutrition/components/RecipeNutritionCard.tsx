@@ -23,7 +23,64 @@ interface RecipeNutritionCardProps {
   servings?: number;
 }
 
-export function RecipeNutritionCard({ recipeId }: RecipeNutritionCardProps) {
+function scaleProfile(p: FullNutritionProfile, factor: number): FullNutritionProfile {
+  const round = (v: number) => Math.round(v * 10) / 10;
+  return {
+    macros: {
+      calories: round(p.macros.calories * factor),
+      protein: round(p.macros.protein * factor),
+      fat: round(p.macros.fat * factor),
+      saturatedFat: round(p.macros.saturatedFat * factor),
+      unsaturatedFat: round(p.macros.unsaturatedFat * factor),
+      carbohydrates: round(p.macros.carbohydrates * factor),
+      fiber: round(p.macros.fiber * factor),
+      sugar: round(p.macros.sugar * factor),
+    },
+    vitamins: {
+      vitaminA: round(p.vitamins.vitaminA * factor),
+      vitaminB1: round(p.vitamins.vitaminB1 * factor),
+      vitaminB2: round(p.vitamins.vitaminB2 * factor),
+      vitaminB3: round(p.vitamins.vitaminB3 * factor),
+      vitaminB5: round(p.vitamins.vitaminB5 * factor),
+      vitaminB6: round(p.vitamins.vitaminB6 * factor),
+      vitaminB7: round(p.vitamins.vitaminB7 * factor),
+      vitaminB9: round(p.vitamins.vitaminB9 * factor),
+      vitaminB12: round(p.vitamins.vitaminB12 * factor),
+      vitaminC: round(p.vitamins.vitaminC * factor),
+      vitaminD: round(p.vitamins.vitaminD * factor),
+      vitaminE: round(p.vitamins.vitaminE * factor),
+      vitaminK: round(p.vitamins.vitaminK * factor),
+    },
+    minerals: {
+      calcium: round(p.minerals.calcium * factor),
+      iron: round(p.minerals.iron * factor),
+      magnesium: round(p.minerals.magnesium * factor),
+      potassium: round(p.minerals.potassium * factor),
+      sodium: round(p.minerals.sodium * factor),
+      zinc: round(p.minerals.zinc * factor),
+      copper: round(p.minerals.copper * factor),
+      selenium: round(p.minerals.selenium * factor),
+      manganese: round(p.minerals.manganese * factor),
+      phosphorus: round(p.minerals.phosphorus * factor),
+    },
+    other: {
+      cholesterol: round(p.other.cholesterol * factor),
+      omega3: round(p.other.omega3 * factor),
+      omega6: round(p.other.omega6 * factor),
+      water: round(p.other.water * factor),
+    },
+  };
+}
+
+function scaleDV(dv: DailyValuePercentages, factor: number): DailyValuePercentages {
+  const out: DailyValuePercentages = {};
+  for (const [k, v] of Object.entries(dv)) {
+    if (v !== undefined) out[k as keyof DailyValuePercentages] = Math.round(v * factor);
+  }
+  return out;
+}
+
+export function RecipeNutritionCard({ recipeId, servings }: RecipeNutritionCardProps) {
   const [nutrition, setNutrition] = useState<RecipeNutritionCalculationResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -147,8 +204,15 @@ export function RecipeNutritionCard({ recipeId }: RecipeNutritionCardProps) {
     );
   }
 
-  const profile = mode === 'per_serving' ? nutrition.perServingNutrition : nutrition.totalNutrition;
-  const dv = nutrition.dailyValuePercentages;
+  const originalServings = nutrition.servings;
+  const servingRatio = servings && originalServings > 0 ? servings / originalServings : 1;
+
+  const profile = mode === 'total'
+    ? scaleProfile(nutrition.totalNutrition, servingRatio)
+    : nutrition.perServingNutrition;
+  const dv = mode === 'total' && servingRatio !== 1
+    ? scaleDV(nutrition.dailyValuePercentages, servingRatio)
+    : nutrition.dailyValuePercentages;
   const isFullCoverage = nutrition.nutritionCoveragePercent >= 100;
 
   return (

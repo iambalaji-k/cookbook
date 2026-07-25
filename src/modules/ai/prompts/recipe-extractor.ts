@@ -16,8 +16,13 @@ CRITICAL FIELD STRUCTURING RULES:
    - "cookTimeMinutes": INTEGER IN MINUTES (e.g. 25). Infer from cooking steps if not explicitly stated.
    - "servings": INTEGER PORTIONS (e.g. 4). Default to 4 if unspecified.
 
-3. INSTRUCTIONS MUST BE SEQUENTIAL:
-   - Each instruction step MUST include "stepNumber" (1, 2, 3...) and clear "instructionText".
+3. INSTRUCTIONS MUST BE COMPLETE & DETAILED — DO NOT SUMMARIZE:
+   - Extract EVERY instruction step from the source. Do NOT skip, condense, or merge steps.
+   - If the source has 10 steps, output all 10. If it has 20, output all 20.
+   - Preserve the full detail from each step: temperatures (350°F), timings (5 minutes), techniques (sauté, deglaze, fold), and specific quantities mentioned mid-step.
+   - Do NOT write things like "Repeat with remaining ingredients" — extract each actual step.
+   - Each instruction MUST have a unique "stepNumber" (1, 2, 3...) and a complete "instructionText".
+   - Include "timerMinutes" as a number when a step has an explicit cook/wait/bake time.
 
 EXPECTED JSON SCHEMA FORMAT EXAMPLE:
 {

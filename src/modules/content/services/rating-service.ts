@@ -1,57 +1,38 @@
 import { db } from '@/core/db';
 import { ratings } from '@/core/db/schema';
-import { eq, sql, avg, count, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 
-export interface RatingSummary {
-  averageRating: number;
-  totalRatings: number;
+export interface RatingResult {
+  rating: number;
 }
 
-/**
- * Calculates average star rating and total vote count for a content entity.
- */
-export async function getRatingSummary(entityId: string): Promise<RatingSummary> {
+export async function getRating(entityId: string): Promise<RatingResult> {
   try {
-    const result = await db
-      .select({
-        avgRating: avg(ratings.rating),
-        totalCount: count(ratings.id),
-      })
+    const [row] = await db
+      .select({ rating: ratings.rating })
       .from(ratings)
-      .where(eq(ratings.entityId, entityId));
+      .where(eq(ratings.entityId, entityId))
+      .limit(1);
 
-    const rawAvg = result[0]?.avgRating ? Number(result[0].avgRating) : 0;
-    const total = result[0]?.totalCount ? Number(result[0].totalCount) : 0;
-
-    return {
-      averageRating: Math.round(rawAvg * 10) / 10,
-      totalRatings: total,
-    };
+    return { rating: row?.rating ?? 0 };
   } catch (err) {
-    console.error('Error fetching rating summary:', err);
-    return { averageRating: 0, totalRatings: 0 };
+    console.error('Error fetching rating:', err);
+    return { rating: 0 };
   }
 }
 
-/**
- * Adds or updates a user rating for a content entity.
- */
-export async function addOrUpdateRating(
-  entityId: string,
-  ratingValue: number,
-  userIdentifier: string = 'guest'
-) {
+export async function setRating(entityId: string, ratingValue: number) {
   if (ratingValue < 1 || ratingValue > 5) {
     throw new Error('Rating must be between 1 and 5 stars.');
   }
 
   const now = new Date().toISOString();
 
-  // Check if rating exists for this entity and user
   const [existing] = await db
     .select()
     .from(ratings)
-    .where(and(eq(ratings.entityId, entityId), eq(ratings.userIdentifier, userIdentifier)));
+    .where(eq(ratings.entityId, entityId))
+    .limit(1);
 
   if (existing) {
     await db
@@ -63,10 +44,10 @@ export async function addOrUpdateRating(
       id: crypto.randomUUID(),
       entityId,
       rating: ratingValue,
-      userIdentifier,
+      userIdentifier: 'chef',
       createdAt: now,
     });
   }
 
-  return getRatingSummary(entityId);
+  return { rating: ratingValue };
 }

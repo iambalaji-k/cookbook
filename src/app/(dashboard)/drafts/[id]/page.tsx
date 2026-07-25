@@ -28,7 +28,7 @@ export default async function ReviewAIDraftPage({
   const StatusIcon = statusInfo.icon;
 
   return (
-    <div className="space-y-8 max-w-5xl">
+    <div className="space-y-8">
       {/* Navigation & Header */}
       <div className="flex items-center justify-between">
         <Link

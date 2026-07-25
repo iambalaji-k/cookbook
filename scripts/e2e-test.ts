@@ -6,7 +6,7 @@ import { scaleIngredients } from '../src/modules/content/utils/portion-scaler';
 import { calculateAndCacheRecipeNutrition } from '../src/modules/nutrition/services/calculator-service';
 import { searchContentFTS } from '../src/modules/search/services/search-service';
 import { getContentEntityBySlug, toggleFavoriteEntity } from '../src/modules/content/services/content-service';
-import { addOrUpdateRating, getRatingSummary } from '../src/modules/content/services/rating-service';
+import { setRating, getRating } from '../src/modules/content/services/rating-service';
 import { addComment, getCommentsByEntityId, deleteComment } from '../src/modules/content/services/comment-service';
 import { approveAIDraft, createAIDraft } from '../src/modules/drafts/services/draft-service';
 import { seedStapleFoods } from '../src/modules/nutrition/services/seed-foods';
@@ -78,10 +78,9 @@ async function runE2ETestSuite() {
       await toggleFavoriteEntity(sampleRecipe.id); // restore
 
       // Star Ratings
-      const testUser = `test_user_${Date.now()}`;
-      await addOrUpdateRating(sampleRecipe.id, 5, testUser);
-      const ratingSummary = await getRatingSummary(sampleRecipe.id);
-      assert(ratingSummary.totalRatings >= 1 && ratingSummary.averageRating > 4, 'Rating submission recalculates average score correctly');
+      await setRating(sampleRecipe.id, 5);
+      const ratingResult = await getRating(sampleRecipe.id);
+      assert(ratingResult.rating === 5, 'Single user rating is stored and returned correctly');
 
       // Comments & Notes
       const recipeComments = await addComment(sampleRecipe.id, 'Test Inspector', 'Extremely delicious! Added extra basil.');

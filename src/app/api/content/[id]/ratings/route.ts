@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getRatingSummary, addOrUpdateRating } from '@/modules/content/services/rating-service';
+import { getRating, setRating } from '@/modules/content/services/rating-service';
 
 export async function GET(
   request: Request,
@@ -7,10 +7,10 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const summary = await getRatingSummary(id);
-    return NextResponse.json(summary);
+    const result = await getRating(id);
+    return NextResponse.json(result);
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'Failed to fetch rating summary' }, { status: 500 });
+    return NextResponse.json({ error: error.message || 'Failed to fetch rating' }, { status: 500 });
   }
 }
 
@@ -21,14 +21,14 @@ export async function POST(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { rating, userIdentifier } = body;
+    const { rating } = body;
 
     if (!rating || typeof rating !== 'number') {
       return NextResponse.json({ error: 'Valid rating (1-5) is required' }, { status: 400 });
     }
 
-    const summary = await addOrUpdateRating(id, rating, userIdentifier || 'guest');
-    return NextResponse.json({ success: true, ...summary });
+    const result = await setRating(id, rating);
+    return NextResponse.json({ success: true, ...result });
   } catch (error: any) {
     return NextResponse.json({ error: error.message || 'Failed to submit rating' }, { status: 500 });
   }
