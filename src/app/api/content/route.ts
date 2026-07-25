@@ -10,8 +10,10 @@ export async function GET(request: Request) {
     const type = searchParams.get('type') || undefined;
     const search = searchParams.get('search') || searchParams.get('q') || undefined;
     const favoritesOnly = searchParams.get('favoritesOnly') === 'true' || searchParams.get('favorites') === 'true' || type === 'favorites';
+    const page = parseInt(searchParams.get('page') || '1', 10);
+    const limit = parseInt(searchParams.get('limit') || '24', 10);
 
-    const entities = await getContentEntities({ contentType: type, query: search, favoritesOnly });
+    const entities = await getContentEntities({ contentType: type, query: search, favoritesOnly, page, limit });
     return NextResponse.json({ status: 'ok', data: entities }, { headers: cacheHeaders(30, 120) });
   } catch (error) {
     return NextResponse.json(

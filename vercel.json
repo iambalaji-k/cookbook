@@ -1,0 +1,17 @@
+{
+  "regions": ["bom1"],
+  "functions": {
+    "src/app/api/imports/scrape/route.ts": {
+      "maxDuration": 30
+    },
+    "src/app/api/imports/youtube-caption/route.ts": {
+      "maxDuration": 30
+    },
+    "src/app/api/imports/[id]/process/route.ts": {
+      "maxDuration": 30
+    },
+    "src/app/api/nutrition/ai-search-nutrition/route.ts": {
+      "maxDuration": 15
+    }
+  }
+}

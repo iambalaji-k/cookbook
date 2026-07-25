@@ -1,6 +1,5 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { initializeDatabase } from '@/core/db/init-db';
 import { getAIDraftById } from '@/modules/drafts/services/draft-service';
 import { EditableProposalReview } from '@/modules/drafts/components/EditableProposalReview';
 import { Sparkles, ArrowLeft, Cpu, FileText, ShieldCheck, Clock, CheckCircle2, XCircle } from 'lucide-react';
@@ -12,7 +11,6 @@ export default async function ReviewAIDraftPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await initializeDatabase();
   const { id } = await params;
   const draft = await getAIDraftById(id);
 

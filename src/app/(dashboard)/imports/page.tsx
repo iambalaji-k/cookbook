@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { initializeDatabase } from '@/core/db/init-db';
 import { getRawImports } from '@/modules/imports/services/import-service';
 import { DeleteImportButton } from '@/modules/imports/components/DeleteImportButton';
 import { FileText, Plus, ExternalLink, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
@@ -7,7 +6,6 @@ import { FileText, Plus, ExternalLink, Clock, CheckCircle2, AlertCircle } from '
 export const revalidate = 30;
 
 export default async function RawImportsPage() {
-  await initializeDatabase();
   const imports = await getRawImports();
 
   const statusBadges = {

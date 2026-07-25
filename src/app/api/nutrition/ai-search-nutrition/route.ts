@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchNutritionDataViaAISearch } from '@/modules/nutrition/services/ai-search-autofill';
 
+export const maxDuration = 15;
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();

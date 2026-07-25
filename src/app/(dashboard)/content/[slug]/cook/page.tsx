@@ -1,5 +1,4 @@
 import { notFound } from 'next/navigation';
-import { initializeDatabase } from '@/core/db/init-db';
 import { getContentEntityBySlug } from '@/modules/content/services/content-service';
 import { KitchenCookView } from '@/modules/content/components/KitchenCookView';
 
@@ -10,7 +9,6 @@ export default async function CookingModePage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
-  await initializeDatabase();
   const { slug } = await params;
   const entity = await getContentEntityBySlug(slug);
 

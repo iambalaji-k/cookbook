@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+
+export const maxDuration = 30;
+
 import { initializeDatabase } from '@/core/db/init-db';
 import { getRawImportById } from '@/modules/imports/services/import-service';
 import { executeAIGatewayPipeline } from '@/modules/ai/gateway';

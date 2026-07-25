@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { initializeDatabase } from '@/core/db/init-db';
 import { getAIDrafts } from '@/modules/drafts/services/draft-service';
 import { Sparkles, Clock, CheckCircle2, XCircle, ArrowRight } from 'lucide-react';
 
@@ -10,7 +9,6 @@ export default async function AIDraftsQueuePage({
 }: {
   searchParams: Promise<{ status?: string }>;
 }) {
-  await initializeDatabase();
   const { status } = await searchParams;
   const filterStatus = (status as 'pending' | 'approved' | 'rejected') || 'pending';
   const drafts = await getAIDrafts(filterStatus);

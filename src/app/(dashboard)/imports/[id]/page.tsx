@@ -1,6 +1,5 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { initializeDatabase } from '@/core/db/init-db';
 import { getRawImportById } from '@/modules/imports/services/import-service';
 import { ProcessImportButton } from '@/modules/imports/components/ProcessImportButton';
 import { DeleteImportButton } from '@/modules/imports/components/DeleteImportButton';
@@ -13,7 +12,6 @@ export default async function RawImportInspectorPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await initializeDatabase();
   const { id } = await params;
   const item = await getRawImportById(id);
 

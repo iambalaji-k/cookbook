@@ -1,5 +1,4 @@
 import { notFound } from 'next/navigation';
-import { initializeDatabase } from '@/core/db/init-db';
 import { getContentEntityBySlug } from '@/modules/content/services/content-service';
 import { ContentForm } from '@/modules/content/components/ContentForm';
 
@@ -10,7 +9,6 @@ export default async function ContentEditPage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
-  await initializeDatabase();
   const { slug } = await params;
   const entity = await getContentEntityBySlug(slug);
 

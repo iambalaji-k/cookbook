@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getVideoDetails } from 'youtube-caption-extractor';
 
+export const maxDuration = 30;
+
 function extractYouTubeVideoID(url: string): string | null {
   const patterns = [
     /(?:youtube\.com\/watch\?v=)([a-zA-Z0-9_-]{11})/,
