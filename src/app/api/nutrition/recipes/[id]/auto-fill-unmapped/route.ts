@@ -4,9 +4,9 @@ import { calculateAndCacheRecipeNutrition } from '@/modules/nutrition/services/c
 import { fetchNutritionDataViaAISearch } from '@/modules/nutrition/services/ai-search-autofill';
 import { createCustomFoodAndMap } from '@/modules/nutrition/services/nutrition-service';
 
-export const maxDuration = 60;
+export const maxDuration = 15;
 
-const CONCURRENCY = 3;
+const CONCURRENCY = 5;
 
 async function processIngredient(ingredientName: string) {
   try {

@@ -9,7 +9,7 @@ import {
 } from '@/core/db/schema';
 import { createContentEntitySchema, type CreateContentEntityInput, type UpdateContentEntityInput } from '../validation';
 import { generateSlug } from '../utils/slug';
-import { eq, desc, like, or, and, inArray } from 'drizzle-orm';
+import { eq, desc, like, or, and, inArray, sql } from 'drizzle-orm';
 import { syncEntityToFTS } from '@/core/db/init-db';
 
 /**
@@ -326,6 +326,7 @@ export async function getContentEntities(options?: {
  * Deletes a content entity. Cascades automatically to sub-tables in SQLite.
  */
 export async function deleteContentEntity(id: string) {
+  await db.run(sql`DELETE FROM content_fts WHERE entity_id = ${id}`);
   await db.delete(contentEntities).where(eq(contentEntities.id, id));
   return { success: true };
 }

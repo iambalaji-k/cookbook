@@ -4,10 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "npx tsx scripts/migrate.ts && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "migrate": "npx tsx scripts/migrate.ts"
+    "migrate": "npx tsx scripts/migrate.ts",
+    "clean-db": "npx tsx scripts/clean-db.ts"
   },
   "dependencies": {
     "@libsql/client": "^0.17.4",

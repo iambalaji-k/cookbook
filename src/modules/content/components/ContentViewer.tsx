@@ -113,9 +113,14 @@ export function ContentViewer({ entity, initialUnitSystem }: ContentViewerProps)
       if (res.ok) {
         router.push('/content');
         router.refresh();
+      } else {
+        const data = await res.json();
+        alert(data.message || 'Failed to delete recipe');
+        setDeleting(false);
       }
     } catch (e) {
       console.error(e);
+      alert('An error occurred while deleting the recipe');
       setDeleting(false);
     }
   };

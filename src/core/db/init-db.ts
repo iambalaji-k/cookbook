@@ -70,7 +70,10 @@ let _initPromise: Promise<any> | null = null;
 
 export function initializeDatabase(): Promise<any> {
   if (_initPromise) return _initPromise;
-  _initPromise = Promise.resolve({ success: true });
+  _initPromise = (async () => {
+    await db.run(sql`PRAGMA foreign_keys = ON`);
+    return { success: true };
+  })();
   return _initPromise;
 }
 
