@@ -4,11 +4,30 @@
  *
  * Usage: npx tsx scripts/clean-db.ts
  */
+import fs from 'fs';
+import path from 'path';
+
+// Parse .env.local manually for CLI standalone execution
+const envPath = path.resolve(process.cwd(), '.env.local');
+if (fs.existsSync(envPath)) {
+  const envConfig = fs.readFileSync(envPath, 'utf-8');
+  for (const line of envConfig.split('\n')) {
+    const trimmed = line.trim();
+    if (trimmed && !trimmed.startsWith('#')) {
+      const [key, ...valueParts] = trimmed.split('=');
+      const val = valueParts.join('=').trim();
+      if (key && val) {
+        process.env[key.trim()] = val;
+      }
+    }
+  }
+}
+
 import { db } from '../src/core/db';
 import { sql } from 'drizzle-orm';
 
 async function cleanDatabase() {
-  console.log('Cleaning remote database data (preserving system & AI provider settings)...');
+  console.log(`Cleaning database data [Target: ${process.env.TURSO_DATABASE_URL || 'file:local.db'}]...`);
 
   const tablesToClean = [
     'ingredients',
@@ -43,7 +62,7 @@ async function cleanDatabase() {
     console.warn('! content_fts clear warning:', err.message || err);
   }
 
-  console.log('✅ Remote database data successfully cleaned! Settings preserved.');
+  console.log('✅ Database data successfully cleaned! Settings preserved.');
 }
 
 cleanDatabase().catch((err) => {
