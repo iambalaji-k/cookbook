@@ -50,6 +50,36 @@ const CLIENT_PROFILES = [
   },
 ];
 
+function parseJSONBraces(str: string, startIdx: number): string | null {
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+
+  for (let i = startIdx; i < str.length; i++) {
+    const char = str[i];
+    if (escape) {
+      escape = false;
+      continue;
+    }
+    if (char === '\\') {
+      escape = true;
+      continue;
+    }
+    if (char === '"') {
+      inString = !inString;
+      continue;
+    }
+    if (!inString) {
+      if (char === '{') depth++;
+      else if (char === '}') {
+        depth--;
+        if (depth === 0) return str.slice(startIdx, i + 1);
+      }
+    }
+  }
+  return null;
+}
+
 export async function extractYouTubeCaptionsClient(url: string): Promise<YouTubeExtractionResult> {
   const videoID = extractYouTubeVideoID(url);
   if (!videoID) {
@@ -101,20 +131,24 @@ export async function extractYouTubeCaptionsClient(url: string): Promise<YouTube
     } catch (_) {}
   }
 
-  // 2. Fallback to HTML watch page if InnerTube player endpoint didn't return caption tracks
+  // 2. Fallback to HTML watch page via CORS proxy if InnerTube player endpoint didn't return caption tracks (or hit CORS block in browser)
   if (!playerData?.captions?.playerCaptionsTracklistRenderer?.captionTracks) {
     const watchUrl = `https://www.youtube.com/watch?v=${videoID}`;
     const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(watchUrl)}`;
-    const res = await fetch(proxyUrl);
-    if (res.ok) {
-      const html = await res.text();
-      const match = html.match(/ytInitialPlayerResponse\s*=\s*({.+?});/);
-      if (match) {
-        try {
-          playerData = JSON.parse(match[1]);
-        } catch (_) {}
+    try {
+      const res = await fetch(proxyUrl);
+      if (res.ok) {
+        const html = await res.text();
+        const keyIdx = html.indexOf('ytInitialPlayerResponse');
+        if (keyIdx !== -1) {
+          const startIdx = html.indexOf('{', keyIdx);
+          const jsonStr = parseJSONBraces(html, startIdx);
+          if (jsonStr) {
+            playerData = JSON.parse(jsonStr);
+          }
+        }
       }
-    }
+    } catch (_) {}
   }
 
   const videoTitle = playerData?.videoDetails?.title || null;
@@ -131,8 +165,12 @@ export async function extractYouTubeCaptionsClient(url: string): Promise<YouTube
   let captionUrl = track.baseUrl.replace(/&fmt=[^&]+/, '');
   captionUrl += '&fmt=json3';
 
-  let captionRes = await fetch(captionUrl);
-  if (!captionRes.ok) {
+  let captionRes: Response | null = null;
+  try {
+    captionRes = await fetch(captionUrl);
+  } catch (_) {}
+
+  if (!captionRes || !captionRes.ok) {
     captionRes = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(captionUrl)}`);
   }
 

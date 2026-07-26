@@ -85,10 +85,13 @@ export function ImportForm() {
           throw new Error(json.message || `Caption extraction failed (${res.status})`);
         }
 
-        setRawPayload(json.rawPayload || '');
+        if (json.rawPayload) {
+          setRawPayload(json.rawPayload);
+        }
         setVideoTitle(json.videoTitle || null);
       } catch (serverErr: any) {
-        setError(clientErr.message || serverErr.message || 'Failed to extract YouTube captions');
+        const primaryMsg = serverErr.message || clientErr.message || 'Failed to extract YouTube captions';
+        setError(primaryMsg);
       }
     } finally {
       setExtractingCaptions(false);

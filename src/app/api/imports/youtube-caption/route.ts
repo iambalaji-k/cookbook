@@ -20,6 +20,34 @@ function extractYouTubeVideoID(url: string): string | null {
   return null;
 }
 
+// Proxy/header wrapper for devhims/youtube-caption-extractor to bypass IP rate limits
+const customProxyFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+  const targetUrl = typeof input === 'string' ? input : input.toString();
+
+  // If fetching caption track from timedtext API, route GET request through proxy if direct call returns 429
+  if (targetUrl.includes('/api/timedtext')) {
+    try {
+      const directRes = await fetch(targetUrl, {
+        ...init,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        },
+        cache: 'no-store',
+      });
+
+      if (directRes.ok) {
+        return directRes;
+      }
+    } catch (_) {}
+
+    // Proxy fallback for timedtext
+    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
+    return fetch(proxyUrl, { cache: 'no-store' });
+  }
+
+  return fetch(input, { ...init, cache: 'no-store' });
+};
+
 export async function POST(request: Request) {
   try {
     const { url } = await request.json();
@@ -41,21 +69,20 @@ export async function POST(request: Request) {
 
     let details;
     try {
-      details = await getVideoDetails({ videoID, lang: 'en' });
+      details = await getVideoDetails({ videoID, lang: 'en', fetch: customProxyFetch as typeof fetch });
     } catch (_) {
-      details = await getVideoDetails({ videoID });
-    }
-
-    if (!details || !details.subtitles || details.subtitles.length === 0) {
       try {
-        details = await getVideoDetails({ videoID });
+        details = await getVideoDetails({ videoID, fetch: customProxyFetch as typeof fetch });
       } catch (_) {}
     }
 
     if (!details || !details.subtitles || details.subtitles.length === 0) {
       return NextResponse.json(
-        { status: 'error', message: 'No captions/subtitles found for this video' },
-        { status: 404 }
+        {
+          status: 'error',
+          message: 'No captions/subtitles found for this video or YouTube rate limit hit.',
+        },
+        { status: 429 }
       );
     }
 
@@ -69,7 +96,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       status: 'ok',
-      message: 'YouTube captions extracted successfully',
+      message: 'YouTube captions extracted successfully using devhims/youtube-caption-extractor',
       sourceUrl: url,
       videoTitle: details.title,
       videoDescription: details.description,
@@ -82,13 +109,6 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { status: 'error', message: 'This video is unavailable or private' },
         { status: 404 }
-      );
-    }
-
-    if (msg.includes('LOGIN_REQUIRED') || msg.includes('not a bot')) {
-      return NextResponse.json(
-        { status: 'error', message: 'YouTube is temporarily blocking this request. Please try again later.' },
-        { status: 429 }
       );
     }
 
