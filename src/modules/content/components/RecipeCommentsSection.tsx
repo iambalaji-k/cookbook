@@ -179,7 +179,7 @@ export function RecipeCommentsSection({
                     {comment.author.charAt(0).toUpperCase()}
                   </div>
                   <span className="text-xs font-bold text-white font-sans">{comment.author}</span>
-                  <span className="text-[10px] text-zinc-400 font-mono flex items-center gap-1">
+                  <span className="text-[10px] text-zinc-400 font-mono flex items-center gap-1" suppressHydrationWarning>
                     <Clock className="w-3 h-3 text-zinc-500" />
                     {new Date(comment.createdAt).toLocaleString(undefined, {
                       dateStyle: 'short',

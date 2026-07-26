@@ -88,7 +88,7 @@ export default async function RawImportsPage() {
                           <span>{statusInfo.label}</span>
                         </span>
                       </td>
-                      <td className="p-3.5 text-zinc-400 font-mono text-[11px] whitespace-nowrap">
+                      <td className="p-3.5 text-zinc-400 font-mono text-[11px] whitespace-nowrap" suppressHydrationWarning>
                         {new Date(item.createdAt).toLocaleString()}
                       </td>
                       <td className="p-3.5 text-right whitespace-nowrap font-mono">

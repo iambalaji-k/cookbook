@@ -15,6 +15,8 @@ import {
   CheckCircle2
 } from 'lucide-react';
 
+import { extractYouTubeCaptionsClient } from '../utils/youtube-client';
+
 export function ImportForm() {
   const router = useRouter();
   const [sourceType, setSourceType] = useState<'plain_text' | 'url' | 'ocr_image' | 'youtube'>('plain_text');
@@ -55,7 +57,7 @@ export function ImportForm() {
     }
   };
 
-  // YouTube Caption Extractor handler
+  // YouTube Caption Extractor handler (Client-Side First with API Fallback)
   const handleExtractCaptions = async () => {
     if (!youtubeUrl.trim()) return;
     setExtractingCaptions(true);
@@ -63,21 +65,31 @@ export function ImportForm() {
     setVideoTitle(null);
 
     try {
-      const res = await fetch('/api/imports/youtube-caption', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: youtubeUrl }),
-      });
+      // 1. Try client-side extraction first (bypasses Vercel serverless IP blocking for free)
+      const result = await extractYouTubeCaptionsClient(youtubeUrl);
+      setRawPayload(result.rawPayload);
+      setVideoTitle(result.videoTitle);
+    } catch (clientErr: any) {
+      // 2. Fall back to server route if client-side extraction fails
+      try {
+        const res = await fetch('/api/imports/youtube-caption', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: youtubeUrl }),
+        });
 
-      const json = await res.json();
-      if (!res.ok) {
-        throw new Error(json.message || 'Caption extraction failed');
+        const isJson = res.headers.get('content-type')?.includes('application/json');
+        const json = isJson ? await res.json() : {};
+
+        if (!res.ok) {
+          throw new Error(json.message || `Caption extraction failed (${res.status})`);
+        }
+
+        setRawPayload(json.rawPayload || '');
+        setVideoTitle(json.videoTitle || null);
+      } catch (serverErr: any) {
+        setError(clientErr.message || serverErr.message || 'Failed to extract YouTube captions');
       }
-
-      setRawPayload(json.rawPayload);
-      setVideoTitle(json.videoTitle || null);
-    } catch (err: any) {
-      setError(err.message || 'Failed to extract YouTube captions');
     } finally {
       setExtractingCaptions(false);
     }

@@ -136,7 +136,7 @@ export function AIStatsCard(props: AIStatsProps) {
           <span className="text-neutral-500 text-[11px] flex items-center gap-1 font-medium">
             <Calendar className="w-3.5 h-3.5 text-rose-400" /> Timestamp
           </span>
-          <p className="font-semibold text-neutral-300 text-[11px] truncate">
+          <p className="font-semibold text-neutral-300 text-[11px] truncate" suppressHydrationWarning>
             {formattedDate || 'Recent'}
           </p>
         </div>

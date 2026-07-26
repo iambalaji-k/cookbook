@@ -72,7 +72,7 @@ export default async function RawImportInspectorPage({
         )}
 
         <div className="pt-2 text-xs text-neutral-400 flex items-center gap-4 border-t border-neutral-800/80">
-          <span>Ingested At: <strong className="text-neutral-200">{new Date(item.createdAt).toLocaleString()}</strong></span>
+          <span>Ingested At: <strong className="text-neutral-200" suppressHydrationWarning>{new Date(item.createdAt).toLocaleString()}</strong></span>
           <span>Payload Size: <strong className="text-neutral-200">{item.rawPayload.length} bytes</strong></span>
         </div>
       </div>

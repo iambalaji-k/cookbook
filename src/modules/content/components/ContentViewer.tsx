@@ -420,7 +420,7 @@ export function ContentViewer({ entity, initialUnitSystem }: ContentViewerProps)
                 <div key={rev.id} className="p-4 rounded-xl bg-neutral-900/80 border border-neutral-800 space-y-1">
                   <div className="flex items-center justify-between font-semibold">
                     <span className="text-orange-400">Revision #{rev.revisionNumber}</span>
-                    <span className="text-zinc-400">{new Date(rev.approvedAt).toLocaleString()}</span>
+                    <span className="text-zinc-400" suppressHydrationWarning>{new Date(rev.approvedAt).toLocaleString()}</span>
                   </div>
                   <p className="text-zinc-300">{rev.changeSummary || 'No revision notes provided'}</p>
                   <p className="text-zinc-500 text-[11px]">Approved by: {rev.approvedBy}</p>
