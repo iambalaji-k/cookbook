@@ -20,64 +20,141 @@ export function extractYouTubeVideoID(url: string): string | null {
   return null;
 }
 
+const CLIENT_PROFILES = [
+  {
+    clientName: 'IOS',
+    clientVersion: '20.10.4',
+    clientNameHeader: '5',
+    userAgent: 'com.google.ios.youtube/20.10.4 (iPhone16,2; U; CPU iOS 18_3_2 like Mac OS X;)',
+    context: {
+      deviceMake: 'Apple',
+      deviceModel: 'iPhone16,2',
+      platform: 'MOBILE',
+      osName: 'iOS',
+      osVersion: '18.3.2.22D82',
+    },
+  },
+  {
+    clientName: 'ANDROID_VR',
+    clientVersion: '1.62.20',
+    clientNameHeader: '28',
+    userAgent: 'com.google.android.apps.youtube.vr.oculus/1.62.20 (Linux; U; Android 12L; eureka-user Build/SQ3A.220605.009.A1) gzip',
+    context: {
+      deviceMake: 'Oculus',
+      deviceModel: 'Quest 3',
+      platform: 'MOBILE',
+      osName: 'Android',
+      osVersion: '12L',
+      androidSdkVersion: 32,
+    },
+  },
+];
+
 export async function extractYouTubeCaptionsClient(url: string): Promise<YouTubeExtractionResult> {
   const videoID = extractYouTubeVideoID(url);
   if (!videoID) {
-    throw new Error('Could not extract YouTube video ID from the provided URL');
+    throw new Error('Could not extract YouTube video ID from the provided URL.');
   }
 
-  // 1. Fetch video page via CORS proxy
-  const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://www.youtube.com/watch?v=${videoID}`)}`;
-  const res = await fetch(proxyUrl);
-  if (!res.ok) {
-    throw new Error('Failed to fetch YouTube video page from client browser.');
+  let playerData: any = null;
+
+  // 1. Fetch metadata & caption tracks using YouTube InnerTube player endpoint
+  for (const client of CLIENT_PROFILES) {
+    try {
+      const body = {
+        context: {
+          client: {
+            clientName: client.clientName,
+            clientVersion: client.clientVersion,
+            hl: 'en',
+            gl: 'US',
+            ...client.context,
+          },
+          user: { lockedSafetyMode: false },
+          request: { useSsl: true },
+        },
+        videoId: videoID,
+        contentCheckOk: true,
+        racyCheckOk: true,
+      };
+
+      const res = await fetch('https://youtubei.googleapis.com/youtubei/v1/player?prettyPrint=false', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: '*/*',
+          'User-Agent': client.userAgent,
+          'X-YouTube-Client-Name': client.clientNameHeader,
+          'X-YouTube-Client-Version': client.clientVersion,
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (res.ok) {
+        const json = await res.json();
+        if (json.playabilityStatus?.status === 'OK' || json.videoDetails) {
+          playerData = json;
+          const tracks = json.captions?.playerCaptionsTracklistRenderer?.captionTracks;
+          if (tracks && tracks.length > 0) break;
+        }
+      }
+    } catch (_) {}
   }
 
-  const html = await res.text();
-
-  // 2. Extract ytInitialPlayerResponse JSON
-  const match = html.match(/ytInitialPlayerResponse\s*=\s*({.+?});/);
-  if (!match) {
-    throw new Error('Could not parse YouTube video metadata.');
+  // 2. Fallback to HTML watch page if InnerTube player endpoint didn't return caption tracks
+  if (!playerData?.captions?.playerCaptionsTracklistRenderer?.captionTracks) {
+    const watchUrl = `https://www.youtube.com/watch?v=${videoID}`;
+    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(watchUrl)}`;
+    const res = await fetch(proxyUrl);
+    if (res.ok) {
+      const html = await res.text();
+      const match = html.match(/ytInitialPlayerResponse\s*=\s*({.+?});/);
+      if (match) {
+        try {
+          playerData = JSON.parse(match[1]);
+        } catch (_) {}
+      }
+    }
   }
 
-  let playerResponse: any;
-  try {
-    playerResponse = JSON.parse(match[1]);
-  } catch (_) {
-    throw new Error('Failed to parse YouTube player response.');
-  }
-
-  const videoTitle = playerResponse?.videoDetails?.title || null;
-  const captionTracks = playerResponse?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
+  const videoTitle = playerData?.videoDetails?.title || null;
+  const captionTracks = playerData?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
 
   if (!captionTracks || captionTracks.length === 0) {
     throw new Error('No captions/subtitles found for this video.');
   }
 
-  // 3. Select English or first available caption track
+  // Select English or first available caption track
   const track = captionTracks.find((t: any) => t.languageCode === 'en' || t.languageCode?.startsWith('en')) || captionTracks[0];
-  const captionRes = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(track.baseUrl)}`);
+
+  // 3. Fetch caption track formatted as json3
+  let captionUrl = track.baseUrl.replace(/&fmt=[^&]+/, '');
+  captionUrl += '&fmt=json3';
+
+  let captionRes = await fetch(captionUrl);
   if (!captionRes.ok) {
-    throw new Error('Failed to fetch caption transcript XML.');
+    captionRes = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(captionUrl)}`);
   }
-  const captionXml = await captionRes.text();
 
-  // 4. Parse XML text content
-  const parser = new DOMParser();
-  const xmlDoc = parser.parseFromString(captionXml, 'text/xml');
-  const textNodes = xmlDoc.getElementsByTagName('text');
+  if (!captionRes.ok) {
+    throw new Error('Failed to fetch transcript data from YouTube.');
+  }
 
+  const captionText = await captionRes.text();
+  let captionJson: any;
+  try {
+    captionJson = JSON.parse(captionText);
+  } catch (_) {
+    throw new Error('Transcript response returned invalid format.');
+  }
+
+  const events = captionJson.events || [];
   const lines: string[] = [];
-  for (let i = 0; i < textNodes.length; i++) {
-    const text = textNodes[i].textContent || '';
-    const decoded = text
-      .replace(/&amp;/g, '&')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&quot;/g, '"')
-      .replace(/&#39;/g, "'");
-    if (decoded.trim()) lines.push(decoded.trim());
+
+  for (const event of events) {
+    if (!event.segs || event.aAppend === 1) continue;
+    const text = event.segs.map((s: any) => s.utf8 || '').join('').trim();
+    if (text) lines.push(text);
   }
 
   const transcript = lines.join('\n');
